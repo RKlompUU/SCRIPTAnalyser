@@ -1,0 +1,76 @@
+-- This file has been generated from package.yaml by hpack version 0.27.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 1c6bbe5bc9b52aa84b36d7f60d203b0659e0417aa622f18a395aa7f0818cd7b2
+
+name:           BitcoinAnalysis
+version:        0.1.0.0
+description:    Please see the README on Github at <https://github.com/githubuser/BitcoinAnalysis#readme>
+homepage:       https://github.com/githubuser/BitcoinAnalysis#readme
+bug-reports:    https://github.com/githubuser/BitcoinAnalysis/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2018 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/BitcoinAnalysis
+
+library
+  exposed-modules:
+      Lib
+      Script.AST
+      Script.Parser
+  other-modules:
+      Paths_BitcoinAnalysis
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7,
+      bytestring >= 0.10.8.1,
+      base16-bytestring >= 0.1.1.6,
+      binary-parser >= 0.5.5,
+      text >= 1.2.2.1,
+      hex >= 0.1.2,
+      hexstring >= 0.11.1,
+      bitcoin-script >= 0.11.2,
+      array >= 0.5.2.0
+  default-language: Haskell2010
+
+executable BitcoinAnalysis-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_BitcoinAnalysis
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      BitcoinAnalysis
+    , base >=4.7 && <5
+    , bytestring >= 0.10.8.1
+                     , base16-bytestring
+    , hex >= 0.1.2,
+      bitcoin-script >= 0.11.2
+  default-language: Haskell2010
+
+test-suite BitcoinAnalysis-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_BitcoinAnalysis
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      BitcoinAnalysis
+    , base >=4.7 && <5
+  default-language: Haskell2010

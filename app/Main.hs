@@ -10,7 +10,7 @@ main :: IO ()
 main = do
   file <- head <$> getArgs
   bs <- B.readFile file
-  let bs' = B.tail $ B.tail $ bs
+  let bs' = bs
   let script = decode bs'
   putStrLn (show $ bs')
   putStrLn (show script)

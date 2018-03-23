@@ -10,12 +10,12 @@ genConstraints :: ScriptAST -> BConstraints
 genConstraints script = foldl1 OrConstr $ map cnstrs (runReader (genCnstrs script) initBuildState)
 
 type Ident = Int
+type OpIdent = String
 data Expr where
   Const :: Int   -> Expr
   Var   :: Ident -> Expr
   Hash  :: Expr -> Expr
-  EqOp  :: Expr -> Expr -> Expr
-  NEqOp  :: Expr -> Expr -> Expr
+  Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Show)
 
 data BConstraints where
@@ -27,7 +27,7 @@ data BConstraints where
 instance Show BConstraints where
   show (ExprConstr e) = show e
   show (AndConstr b0 b1) = show b0 ++ " && " ++ show b1
-  show (OrConstr  b0 b1) = "(" ++ show b0 ++ ") ||\n(" ++ show b1 ++ ")"
+  show (OrConstr  b0 b1) = show b0 ++ " ||\n" ++ show b1
   show LeafConstr = "True"
 
 type Stack = [Expr]
@@ -64,8 +64,8 @@ stModITE b = \st ->
                   then genV st
                   else popStack st
       nc = ExprConstr $ if b
-                          then EqOp v (Const 0)
-                          else NEqOp v (Const 0)
+                          then Op v "/=" (Const 0)
+                          else Op v "==" (Const 0)
   in cnstrsMod (AndConstr nc) st'
 
 

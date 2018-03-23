@@ -26,16 +26,17 @@ data BuildState =
     freshV     :: Ident
   }
 
-type ConstraintBuilder a = ReaderT BuildState (Writer [BuildState]) a
+type ConstraintBuilder a = Reader BuildState a
 
 stModITE :: Bool -> BuildState -> BuildState
 stModITE b =
   \st -> undefined
 
-genCnstrs :: ScriptAST -> ConstraintBuilder ()
+genCnstrs :: ScriptAST -> ConstraintBuilder [BuildState]
 genCnstrs (ScriptITE l b0 b1 cont) = do
-  withReaderT (stModITE True)  (genCnstrs b0)
-  withReaderT (stModITE False) (genCnstrs b1)
+  ss0 <- withReaderT (stModITE True)  (genCnstrs b0)
+  ss1 <- withReaderT (stModITE False) (genCnstrs b1)
+  concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 genCnstrs ScriptTail = do
   s <- ask
-  tell [s]
+  return [s]

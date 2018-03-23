@@ -2,14 +2,21 @@
 module ConstraintsGen where
 
 import Control.Monad.Trans.Reader
-import Control.Monad.Writer.Lazy
 
 import Script.AST
+
+
+genConstraints :: ScriptAST -> BConstraints
+genConstraints script = foldl1 OrConstr $ map cnstrs (runReader (genCnstrs script) initBuildState)
 
 type Ident = Int
 data Expr where
   Const :: Int   -> Expr
   Var   :: Ident -> Expr
+  Hash  :: Expr -> Expr
+  EqOp  :: Expr -> Expr -> Expr
+  NEqOp  :: Expr -> Expr -> Expr
+  deriving (Show)
 
 data BConstraints where
   ExprConstr :: Expr -> BConstraints
@@ -17,26 +24,58 @@ data BConstraints where
   OrConstr   :: BConstraints -> BConstraints -> BConstraints
   LeafConstr :: BConstraints
 
+instance Show BConstraints where
+  show (ExprConstr e) = show e
+  show (AndConstr b0 b1) = show b0 ++ " && " ++ show b1
+  show (OrConstr  b0 b1) = "(" ++ show b0 ++ ") ||\n(" ++ show b1 ++ ")"
+  show LeafConstr = "True"
+
 type Stack = [Expr]
 data BuildState =
   BuildState {
-    cnstrs     :: BConstraints,
-    stackSt    :: Stack,
-    altStackSt :: Stack,
-    freshV     :: Ident
+    cnstrs   :: BConstraints,
+    stack    :: Stack,
+    altStack :: Stack,
+    freshV   :: Ident
+  }
+initBuildState =
+  BuildState {
+    cnstrs   = LeafConstr,
+    stack    = [],
+    altStack = [],
+    freshV   = 0
   }
 
 type ConstraintBuilder a = Reader BuildState a
 
+genV :: BuildState -> (BuildState, Expr)
+genV s = (s {freshV = freshV s + 1}, Var $ freshV s)
+
+cnstrsMod :: (BConstraints -> BConstraints) -> BuildState -> BuildState
+cnstrsMod f st =
+  st {cnstrs = f $ cnstrs st}
+
+popStack :: BuildState -> (BuildState,Expr)
+popStack st = (st {stack = tail $ stack st}, head (stack st))
+
 stModITE :: Bool -> BuildState -> BuildState
-stModITE b =
-  \st -> undefined
+stModITE b = \st ->
+  let (st', v) = if null (stack st)
+                  then genV st
+                  else popStack st
+      nc = ExprConstr $ if b
+                          then EqOp v (Const 0)
+                          else NEqOp v (Const 0)
+  in cnstrsMod (AndConstr nc) st'
+
 
 genCnstrs :: ScriptAST -> ConstraintBuilder [BuildState]
 genCnstrs (ScriptITE l b0 b1 cont) = do
-  ss0 <- withReaderT (stModITE True)  (genCnstrs b0)
-  ss1 <- withReaderT (stModITE False) (genCnstrs b1)
+  ss0 <- withReader (stModITE True)  (genCnstrs b0)
+  ss1 <- withReader (stModITE False) (genCnstrs b1)
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
+genCnstrs (ScriptOp l op cont) = do
+  genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask
   return [s]

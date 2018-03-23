@@ -18,18 +18,14 @@ import Script.AST
 
 %%
 
-scriptAst : stmntsBlock { $1 }
+scriptAst : stmnts { $1 }
 
-stmntsBlock : stmnts { ScriptBlock 0 $1 }
-
-stmnts : stmnts stmnt { $1 ++ [$2] }
-       | { [] }
-
-stmnt : if stmntsBlock else stmntsBlock fi { ScriptITE 0 $2 $4 }
-      | if stmntsBlock fi { ScriptITE 0 $2 (ScriptBlock 0 []) }
-      | ifn stmntsBlock else stmntsBlock fi { ScriptITE 0 $4 $2 }
-      | ifn stmntsBlock fi { ScriptITE 0 (ScriptBlock 0 []) $2 }
-      | op { ScriptOp 0 $1 }
+stmnts : if stmnts else stmnts fi stmnts { ScriptITE 0 $2 $4 $6 }
+       | if stmnts fi stmnts { ScriptITE 0 $2 ScriptTail $4 }
+       | ifn stmnts else stmnts fi stmnts { ScriptITE 0 $4 $2 $6 }
+       | ifn stmnts fi stmnts { ScriptITE 0 ScriptTail $2 $4 }
+       | op stmnts { ScriptOp 0 $1 $2 }
+       | { ScriptTail }
 
 
 {

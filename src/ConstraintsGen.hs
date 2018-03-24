@@ -26,10 +26,19 @@ type OpIdent = String
 data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
+  Length :: Expr -> Expr
   Var   :: Ident -> Expr
   Hash  :: Expr -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Show)
+
+e2i :: Expr -> Int
+e2i (ConstInt i) = i
+e2i e = error $ "Error: e2i for expr not implemented: " ++ show e
+
+e2l :: Expr -> Int
+e2l (ConstBS bs) = BS.length bs
+e2l e = error $ "Error: e2l for expr not implemented: " ++ show e
 
 false = ExprConstr $ Op (ConstInt 0) "==" (ConstInt 1)
 true  = ExprConstr $ Op (ConstInt 0) "==" (ConstInt 0)
@@ -93,15 +102,16 @@ genV = do
 popStack :: BranchBuilder Expr
 popStack = do
   st <- get
-  put $ st {stack = tail $ stack st}
-  return $ head (stack st)
-
-safePopStack :: BranchBuilder Expr
-safePopStack = do
-  st <- get
   if null (stack st)
     then genV
-    else popStack
+    else do
+      st <- get
+      put $ st {stack = tail $ stack st}
+      return $ head (stack st)
+
+popsStack :: Int -> BranchBuilder [Expr]
+popsStack n =
+  reverse <$> replicateM n popStack
 
 pushStack :: Expr -> BranchBuilder ()
 pushStack e = do
@@ -111,6 +121,11 @@ pushStack e = do
 pushsStack :: [Expr] -> BranchBuilder ()
 pushsStack es = mapM_ pushStack es
 
+peakStack :: BranchBuilder Expr
+peakStack = do
+  v <- popStack
+  pushStack v
+  return v
 
 --
 -- Alternative stack operations
@@ -125,15 +140,12 @@ genAltV = do
 popAltStack :: BranchBuilder Expr
 popAltStack = do
   st <- get
-  put $ st {altStack = tail $ altStack st}
-  return $ head (altStack st)
-
-safePopAltStack :: BranchBuilder Expr
-safePopAltStack = do
-  st <- get
   if null (altStack st)
     then genAltV
-    else popAltStack
+    else do
+      st <- get
+      put $ st {altStack = tail $ altStack st}
+      return $ head (altStack st)
 
 pushAltStack :: Expr -> BranchBuilder ()
 pushAltStack e = do
@@ -149,20 +161,38 @@ withReader_ x m =
   withReader (const x) m
 
 genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
-genCnstrs (ScriptITE l b0 b1 cont) = do
+genCnstrs (ScriptITE b0 b1 cont) = do
   ss0 <- withReader (>> stModITE True)  (genCnstrs b0)
   ss1 <- withReader (>> stModITE False) (genCnstrs b1)
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
-genCnstrs (ScriptOp l op cont) = do
+genCnstrs (ScriptOp OP_EQUAL cont) = do
+  ss0 <- withReader (>> stModEq True)  (genCnstrs cont)
+  ss1 <- withReader (>> stModEq False) (genCnstrs cont)
+  return $ ss0 ++ ss1
+genCnstrs (ScriptOp OP_EQUALVERIFY cont) = do
+  genCnstrs (ScriptOp OP_EQUAL (ScriptOp OP_VERIFY cont))
+genCnstrs (ScriptOp op cont) = do
   withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask
   return [s]
 
+stModEq :: Bool -> BranchBuilder ()
+stModEq b = do
+  v_2 <- popStack
+  v_1 <- popStack
+  let nc = ExprConstr $ if b
+                          then Op v_1 "==" v_2
+                          else Op v_1 "/=" v_2
+  cnstrsMod (AndConstr nc)
+  if b
+    then pushStack (ConstInt 1)
+    else pushStack (ConstInt 0)
+
 
 stModITE :: Bool -> BranchBuilder ()
 stModITE b = do
-  v <- safePopStack
+  v <- popStack
   let nc = ExprConstr $ if b
                           then Op v "/=" (ConstInt 0)
                           else Op v "==" (ConstInt 0)
@@ -192,20 +222,86 @@ stModOp OP_16 = pushStack (ConstInt 16)
 
 stModOp OP_NOP = return ()
 
-stModOp OP_VERIF = do
-  v <- safePopStack
+stModOp OP_VERIFY = do
+  v <- popStack
   let nc = ExprConstr $ Op v "/=" (ConstInt 0)
   cnstrsMod (AndConstr nc)
 stModOp OP_RETURN = cnstrsMod (AndConstr false)
 
 stModOp OP_TOALTSTACK = do
-  v <- safePopStack
+  v <- popStack
   pushAltStack v
 stModOp OP_FROMALTSTACK = do
-  v <- safePopAltStack
+  v <- popAltStack
   pushStack v
+stModOp OP_DEPTH = do
+  depth <- length . stack <$> get
+  pushStack (ConstInt depth)
+stModOp OP_DROP = popStack >> return ()
+stModOp OP_DUP = popStack >>= \v -> pushsStack [v,v]
+stModOp OP_NIP = do
+  v <- popStack
+  popStack
+  pushStack v
+stModOp OP_OVER = do
+  v2 <- popStack
+  v1 <- popStack
+  pushsStack [v1,v2,v1]
+stModOp OP_PICK = do
+  n <- e2i <$> popStack
+  es <- popsStack (n-1)
+  e_n <- popStack
+  pushsStack (e_n : es)
+  pushStack e_n
+stModOp OP_ROLL = do
+  n <- e2i <$> popStack
+  es <- popsStack (n-1)
+  e_n <- popStack
+  pushsStack es
+  pushStack e_n
+stModOp OP_ROT = do
+  v_3 <- popStack
+  v_2 <- popStack
+  v_1 <- popStack
+  pushsStack [v_2, v_3, v_1]
+stModOp OP_SWAP = popsStack 2 >>= \vs -> pushsStack (reverse vs)
+stModOp OP_TUCK = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushsStack [v_2, v_1, v_2]
+stModOp OP_2DROP = popsStack 2 >> return ()
+stModOp OP_2DUP = popsStack 2 >>= \vs -> pushsStack (vs ++ vs)
+stModOp OP_3DUP = popsStack 3 >>= \vs -> pushsStack (vs ++ vs)
+stModOp OP_2OVER = popsStack 4 >>= \vs -> pushsStack (vs ++ drop 2 vs)
+stModOp OP_2ROT = popsStack 6 >>= \vs -> pushsStack (drop 2 vs ++ take 2 vs)
+stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack (drop 2 vs ++ take 2 vs)
 
-stModOp OP_DROP = safePopStack >> return ()
-stModOp OP_DUP = safePopStack >>= \v -> pushsStack [v,v]
+stModOp OP_SIZE = peakStack >>= \v -> pushStack (Length v)
+stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))
+stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
+stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
+
+-- DISABLED OP_CODES
+stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr false)
+
 stModOp op =
   error $ "Error, no stModOp implementation for operator: " ++ show op
+
+
+disabledOps =
+  [
+  OP_CAT,
+  OP_SUBSTR,
+  OP_LEFT,
+  OP_RIGHT,
+
+  OP_INVERT,
+  OP_AND,
+  OP_OR,
+  OP_XOR,
+
+  OP_2MUL,
+  OP_2DIV,
+
+  OP_VERIF
+  ]

@@ -31,6 +31,9 @@ data Expr where
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Show)
 
+false = ExprConstr $ Op (ConstInt 0) "==" (ConstInt 1)
+true  = ExprConstr $ Op (ConstInt 0) "==" (ConstInt 0)
+
 data BConstraints where
   ExprConstr :: Expr -> BConstraints
   AndConstr  :: BConstraints -> BConstraints -> BConstraints
@@ -46,17 +49,19 @@ instance Show BConstraints where
 type Stack = [Expr]
 data BuildState =
   BuildState {
-    cnstrs   :: BConstraints,
-    stack    :: Stack,
-    altStack :: Stack,
-    freshV   :: Ident
+    cnstrs    :: BConstraints,
+    stack     :: Stack,
+    altStack  :: Stack,
+    freshV    :: Ident,
+    freshAltV :: Ident
   }
 initBuildState =
   BuildState {
-    cnstrs   = LeafConstr,
-    stack    = [],
-    altStack = [],
-    freshV   = 0
+    cnstrs    = LeafConstr,
+    stack     = [],
+    altStack  = [],
+    freshV    = 0,
+    freshAltV = 0
   }
 
 instance Show BuildState where
@@ -68,17 +73,22 @@ instance Show BuildState where
 type BranchBuilder a = State BuildState a
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
 
-genV :: BranchBuilder Expr
-genV = do
-  st <- get
-  put $ st {freshV = freshV st + 1}
-  return $ Var (freshV st)
-
 
 cnstrsMod :: (BConstraints -> BConstraints) -> BranchBuilder ()
 cnstrsMod f = do
   st <- get
   put $ st {cnstrs = f $ cnstrs st}
+
+
+--
+-- Main stack operations
+--
+
+genV :: BranchBuilder Expr
+genV = do
+  st <- get
+  put $ st {freshV = freshV st + 1}
+  return $ Var (freshV st)
 
 popStack :: BranchBuilder Expr
 popStack = do
@@ -100,6 +110,39 @@ pushStack e = do
 
 pushsStack :: [Expr] -> BranchBuilder ()
 pushsStack es = mapM_ pushStack es
+
+
+--
+-- Alternative stack operations
+--
+
+genAltV :: BranchBuilder Expr
+genAltV = do
+  st <- get
+  put $ st {freshAltV = freshAltV st + 1}
+  return $ Var (freshAltV st)
+
+popAltStack :: BranchBuilder Expr
+popAltStack = do
+  st <- get
+  put $ st {altStack = tail $ altStack st}
+  return $ head (altStack st)
+
+safePopAltStack :: BranchBuilder Expr
+safePopAltStack = do
+  st <- get
+  if null (altStack st)
+    then genAltV
+    else popAltStack
+
+pushAltStack :: Expr -> BranchBuilder ()
+pushAltStack e = do
+  st <- get
+  put $ st {altStack = e : altStack st}
+
+pushsAltStack :: [Expr] -> BranchBuilder ()
+pushsAltStack es = mapM_ pushAltStack es
+
 
 --withReader_ :: r' -> Reader r' a -> Reader r a
 withReader_ x m =
@@ -126,14 +169,43 @@ stModITE b = do
   cnstrsMod (AndConstr nc)
 
 stModOp :: ScriptOp -> BranchBuilder ()
-stModOp (OP_PUSHDATA bs _) = do
-  pushStack (ConstBS bs)
-stModOp OP_DROP = do
-  safePopStack
-  return ()
-stModOp OP_DUP = do
+stModOp (OP_PUSHDATA bs _) = pushStack (ConstBS bs)
+
+stModOp OP_0 = pushStack (ConstBS BS.empty)
+stModOp OP_1NEGATE = pushStack (ConstInt (-1))
+stModOp OP_1 = pushStack (ConstInt 1)
+stModOp OP_2 = pushStack (ConstInt 2)
+stModOp OP_3 = pushStack (ConstInt 3)
+stModOp OP_4 = pushStack (ConstInt 4)
+stModOp OP_5 = pushStack (ConstInt 5)
+stModOp OP_6 = pushStack (ConstInt 6)
+stModOp OP_7 = pushStack (ConstInt 7)
+stModOp OP_8 = pushStack (ConstInt 8)
+stModOp OP_9 = pushStack (ConstInt 9)
+stModOp OP_10 = pushStack (ConstInt 10)
+stModOp OP_11 = pushStack (ConstInt 11)
+stModOp OP_12 = pushStack (ConstInt 12)
+stModOp OP_13 = pushStack (ConstInt 13)
+stModOp OP_14 = pushStack (ConstInt 14)
+stModOp OP_15 = pushStack (ConstInt 15)
+stModOp OP_16 = pushStack (ConstInt 16)
+
+stModOp OP_NOP = return ()
+
+stModOp OP_VERIF = do
   v <- safePopStack
+  let nc = ExprConstr $ Op v "/=" (ConstInt 0)
+  cnstrsMod (AndConstr nc)
+stModOp OP_RETURN = cnstrsMod (AndConstr false)
+
+stModOp OP_TOALTSTACK = do
+  v <- safePopStack
+  pushAltStack v
+stModOp OP_FROMALTSTACK = do
+  v <- safePopAltStack
   pushStack v
-  pushStack v
-stModOp _ = do
-  return ()
+
+stModOp OP_DROP = safePopStack >> return ()
+stModOp OP_DUP = safePopStack >>= \v -> pushsStack [v,v]
+stModOp op =
+  error $ "Error, no stModOp implementation for operator: " ++ show op

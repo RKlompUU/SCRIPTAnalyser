@@ -39,9 +39,9 @@ data Expr where
   --                          then 1
   --                          else 0
   Within :: Expr -> Expr -> Expr -> Expr
+  Hash :: Expr -> Expr
 
   Var   :: Ident -> Expr
-  Hash  :: Expr -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Show)
 
@@ -351,6 +351,7 @@ stModOp OP_WITHIN = do
   v_2 <- popStack
   v_1 <- popStack
   pushStack (Within v_1 v_2 v_3)
+stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr false)
@@ -358,6 +359,16 @@ stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr false)
 stModOp op =
   error $ "Error, no stModOp implementation for operator: " ++ show op
 
+
+hashOps =
+  [
+  OP_RIPEMD160,
+  OP_SHA1,
+  OP_SHA256,
+  OP_HASH160,
+  OP_HASH256,
+  OP_CHECKSIG
+  ]
 
 disabledOps =
   [

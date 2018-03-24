@@ -2,18 +2,30 @@
 module ConstraintsGen where
 
 import Control.Monad.Trans.Reader
+import Control.Monad.State.Lazy
+import Control.Applicative
 
 import Script.AST
 import Data.Bitcoin.Script.Types
 
+import qualified Data.ByteString as BS
 
 genConstraints :: ScriptAST -> BConstraints
-genConstraints script = foldl1 OrConstr $ map cnstrs (runReader (genCnstrs script) initBuildState)
+genConstraints script
+  = foldl1 OrConstr
+  $ map cnstrs
+  $ genBuildStates script
+
+genBuildStates :: ScriptAST -> [BuildState]
+genBuildStates script
+  = map (\s -> execState s initBuildState)
+  $ runReader (genCnstrs script) (return ())
 
 type Ident = Int
 type OpIdent = String
 data Expr where
-  Const :: Int   -> Expr
+  ConstInt :: Int -> Expr
+  ConstBS  :: BS.ByteString -> Expr
   Var   :: Ident -> Expr
   Hash  :: Expr -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
@@ -47,57 +59,81 @@ initBuildState =
     freshV   = 0
   }
 
-type ConstraintBuilder a = Reader BuildState a
+instance Show BuildState where
+  show s = "BuildState {\n\tcnstrs: " ++ show (cnstrs s) ++
+           ",\n\tstack: " ++ show (stack s) ++
+           ",\n\taltStack: " ++ show (altStack s) ++
+           "}\n"
 
-genV :: BuildState -> (BuildState, Expr)
-genV s = (s {freshV = freshV s + 1}, Var $ freshV s)
+type BranchBuilder a = State BuildState a
+type ConstraintBuilder a = Reader (BranchBuilder ()) a
 
-cnstrsMod :: (BConstraints -> BConstraints) -> BuildState -> BuildState
-cnstrsMod f st =
-  st {cnstrs = f $ cnstrs st}
+genV :: BranchBuilder Expr
+genV = do
+  st <- get
+  put $ st {freshV = freshV st + 1}
+  return $ Var (freshV st)
 
-popStack :: BuildState -> (BuildState,Expr)
-popStack st = (st {stack = tail $ stack st}, head (stack st))
 
-safePopStack :: BuildState -> (BuildState,Expr)
-safePopStack st =
+cnstrsMod :: (BConstraints -> BConstraints) -> BranchBuilder ()
+cnstrsMod f = do
+  st <- get
+  put $ st {cnstrs = f $ cnstrs st}
+
+popStack :: BranchBuilder Expr
+popStack = do
+  st <- get
+  put $ st {stack = tail $ stack st}
+  return $ head (stack st)
+
+safePopStack :: BranchBuilder Expr
+safePopStack = do
+  st <- get
   if null (stack st)
-    then genV st
-    else popStack st
+    then genV
+    else popStack
 
-pushStack :: Expr -> BuildState -> BuildState
-pushStack e st =
-  st {stack = e : stack st}
+pushStack :: Expr -> BranchBuilder ()
+pushStack e = do
+  st <- get
+  put $ st {stack = e : stack st}
 
-pushsStack :: [Expr] -> BuildState -> BuildState
-pushsStack es st =
-  st {stack = foldl (flip (:)) (stack st) es}
+pushsStack :: [Expr] -> BranchBuilder ()
+pushsStack es = mapM_ pushStack es
 
-stModITE :: Bool -> BuildState -> BuildState
-stModITE b = \st ->
-  let (st', v) = safePopStack st
-      nc = ExprConstr $ if b
-                          then Op v "/=" (Const 0)
-                          else Op v "==" (Const 0)
-  in cnstrsMod (AndConstr nc) st'
+--withReader_ :: r' -> Reader r' a -> Reader r a
+withReader_ x m =
+  withReader (const x) m
 
-stModOp :: ScriptOp -> BuildState -> BuildState
-stModOp OP_DROP = \st ->
-  let (st', v) = safePopStack st
-  in st'
-stModOp OP_DUP = \st ->
-  let (st', v) = safePopStack st
-  in pushsStack [v,v] st
-stModOp _ = \st ->
-  st
-
-genCnstrs :: ScriptAST -> ConstraintBuilder [BuildState]
+genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
 genCnstrs (ScriptITE l b0 b1 cont) = do
-  ss0 <- withReader (stModITE True)  (genCnstrs b0)
-  ss1 <- withReader (stModITE False) (genCnstrs b1)
+  ss0 <- withReader (>> stModITE True)  (genCnstrs b0)
+  ss1 <- withReader (>> stModITE False) (genCnstrs b1)
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 genCnstrs (ScriptOp l op cont) = do
-  withReader (stModOp op) $ genCnstrs cont
+  withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask
   return [s]
+
+
+stModITE :: Bool -> BranchBuilder ()
+stModITE b = do
+  v <- safePopStack
+  let nc = ExprConstr $ if b
+                          then Op v "/=" (ConstInt 0)
+                          else Op v "==" (ConstInt 0)
+  cnstrsMod (AndConstr nc)
+
+stModOp :: ScriptOp -> BranchBuilder ()
+stModOp (OP_PUSHDATA bs _) = do
+  pushStack (ConstBS bs)
+stModOp OP_DROP = do
+  safePopStack
+  return ()
+stModOp OP_DUP = do
+  v <- safePopStack
+  pushStack v
+  pushStack v
+stModOp _ = do
+  return ()

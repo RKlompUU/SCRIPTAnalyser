@@ -20,5 +20,7 @@ main = do
   putStrLn $ "-------------------------"
   putStrLn $ show ast
   putStrLn $ "-------------------------"
-  let cnstrs = genConstraints ast
-  putStrLn $ show cnstrs
+  --let cnstrs = genConstraints ast
+  --putStrLn $ show cnstrs
+  let ss = genBuildStates ast
+  putStrLn $ show ss

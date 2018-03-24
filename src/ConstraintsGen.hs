@@ -26,7 +26,20 @@ type OpIdent = String
 data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
+
   Length :: Expr -> Expr
+  Abs :: Expr -> Expr
+  -- Not: \v -> if v == 0
+  --              then Not(v) = 1
+  --              else Not(v) = 0
+  Not :: Expr -> Expr
+  Min :: Expr -> Expr -> Expr
+  Max :: Expr -> Expr -> Expr
+  -- Within: \x min max -> if min <= x <= max
+  --                          then 1
+  --                          else 0
+  Within :: Expr -> Expr -> Expr -> Expr
+
   Var   :: Ident -> Expr
   Hash  :: Expr -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
@@ -171,6 +184,8 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
   return $ ss0 ++ ss1
 genCnstrs (ScriptOp OP_EQUALVERIFY cont) = do
   genCnstrs (ScriptOp OP_EQUAL (ScriptOp OP_VERIFY cont))
+genCnstrs (ScriptOp OP_NUMEQUALVERIFY cont) = do
+  genCnstrs (ScriptOp OP_NUMEQUAL (ScriptOp OP_VERIFY cont))
 genCnstrs (ScriptOp op cont) = do
   withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
@@ -280,6 +295,62 @@ stModOp OP_SIZE = peakStack >>= \v -> pushStack (Length v)
 stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))
 stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
 stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
+stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
+stModOp OP_NOT = popStack >>= \v -> pushStack (Not v)
+stModOp OP_0NOTEQUAL = popStack >>= \v -> pushStack (Op v "/=" (ConstInt 0))
+stModOp OP_ADD = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 "+" v_2)
+stModOp OP_SUB = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_2 "-" v_1)
+stModOp OP_BOOLAND = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_2 "/\\" v_1)
+stModOp OP_BOOLOR = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_2 "\\/" v_1)
+stModOp OP_NUMEQUAL = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 "==" v_2)
+stModOp OP_NUMNOTEQUAL = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 "/=" v_2)
+stModOp OP_LESSTHAN = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 "<" v_2)
+stModOp OP_GREATERTHAN = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 ">" v_2)
+stModOp OP_LESSTHANOREQUAL = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 "<=" v_2)
+stModOp OP_GREATERTHANOREQUAL = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 ">=" v_2)
+stModOp OP_MIN = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Min v_1 v_2)
+stModOp OP_MAX = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Max v_1 v_2)
+stModOp OP_WITHIN = do
+  v_3 <- popStack
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Within v_1 v_2 v_3)
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr false)
@@ -302,6 +373,11 @@ disabledOps =
 
   OP_2MUL,
   OP_2DIV,
+  OP_MUL,
+  OP_DIV,
+  OP_MOD,
+  OP_LSHIFT,
+  OP_RSHIFT,
 
   OP_VERIF
   ]

@@ -95,7 +95,7 @@ initBuildState =
     stack     = [],
     altStack  = [],
     freshV    = 0,
-    freshAltV = 0,
+    freshAltV = -1,
     muts      = []
   }
 
@@ -172,7 +172,7 @@ peakStack = do
 genAltV :: BranchBuilder Expr
 genAltV = do
   st <- get
-  put $ st {freshAltV = freshAltV st + 1}
+  put $ st {freshAltV = freshAltV st - 1}
   return $ Var (freshAltV st)
 
 popAltStack :: BranchBuilder Expr

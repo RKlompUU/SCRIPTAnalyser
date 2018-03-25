@@ -9,6 +9,7 @@ import Script.AST
 import Data.Bitcoin.Script.Types
 
 import qualified Data.ByteString as BS
+import Data.List
 
 genConstraints :: ScriptAST -> BConstraints
 genConstraints script
@@ -68,6 +69,16 @@ instance Show BConstraints where
   show (OrConstr  b0 b1) = show b0 ++ " ||\n" ++ show b1
   show LeafConstr = "True"
 
+data BranchMutation =
+    Popped Expr Stack
+  | Pushed Expr Stack
+  | Infered BConstraints
+
+instance Show BranchMutation where
+  show (Popped e s) = "Popped " ++ show e ++ "\n\t\t |-> " ++ show s
+  show (Pushed e s) = "Pushed " ++ show e ++ "\n\t\t |-> " ++ show s
+  show (Infered c)  = "Infering that: " ++ show c
+
 type Stack = [Expr]
 data BuildState =
   BuildState {
@@ -75,7 +86,8 @@ data BuildState =
     stack     :: Stack,
     altStack  :: Stack,
     freshV    :: Ident,
-    freshAltV :: Ident
+    freshAltV :: Ident,
+    muts      :: [BranchMutation]
   }
 initBuildState =
   BuildState {
@@ -83,13 +95,16 @@ initBuildState =
     stack     = [],
     altStack  = [],
     freshV    = 0,
-    freshAltV = 0
+    freshAltV = 0,
+    muts      = []
   }
 
 instance Show BuildState where
   show s = "BuildState {\n\tcnstrs: " ++ show (cnstrs s) ++
            ",\n\tstack: " ++ show (stack s) ++
            ",\n\taltStack: " ++ show (altStack s) ++
+           ",\n\tbranch history:\n\t.. " ++
+           intercalate "\n\t.. " (map show $ (reverse $ muts s)) ++
            "}\n"
 
 type BranchBuilder a = State BuildState a
@@ -101,6 +116,12 @@ cnstrsMod f = do
   st <- get
   put $ st {cnstrs = f $ cnstrs st}
 
+newEConstr :: Expr -> BranchBuilder BConstraints
+newEConstr e = do
+  let eConstr = ExprConstr e
+  st <- get
+  put $ st {muts = Infered eConstr : muts st}
+  return eConstr
 
 --
 -- Main stack operations
@@ -109,8 +130,9 @@ cnstrsMod f = do
 genV :: BranchBuilder Expr
 genV = do
   st <- get
-  put $ st {freshV = freshV st + 1}
-  return $ Var (freshV st)
+  let v = Var (freshV st)
+  put $ st {freshV = freshV st + 1, muts = Popped v []: muts st}
+  return $ v
 
 popStack :: BranchBuilder Expr
 popStack = do
@@ -119,8 +141,10 @@ popStack = do
     then genV
     else do
       st <- get
-      put $ st {stack = tail $ stack st}
-      return $ head (stack st)
+      let e      = head (stack st)
+          stack' = tail $ stack st
+      put $ st {stack = stack', muts = Popped e stack' : muts st}
+      return $ e
 
 popsStack :: Int -> BranchBuilder [Expr]
 popsStack n =
@@ -129,7 +153,8 @@ popsStack n =
 pushStack :: Expr -> BranchBuilder ()
 pushStack e = do
   st <- get
-  put $ st {stack = e : stack st}
+  let stack' = e : stack st
+  put $ st {stack = stack', muts = Pushed e stack' : muts st}
 
 pushsStack :: [Expr] -> BranchBuilder ()
 pushsStack es = mapM_ pushStack es
@@ -186,6 +211,8 @@ genCnstrs (ScriptOp OP_EQUALVERIFY cont) = do
   genCnstrs (ScriptOp OP_EQUAL (ScriptOp OP_VERIFY cont))
 genCnstrs (ScriptOp OP_NUMEQUALVERIFY cont) = do
   genCnstrs (ScriptOp OP_NUMEQUAL (ScriptOp OP_VERIFY cont))
+--genCnstrs (ScriptOp OP_CHECKSIG cont) = do
+--  genCnstrs (ScriptOp
 genCnstrs (ScriptOp op cont) = do
   withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
@@ -196,9 +223,9 @@ stModEq :: Bool -> BranchBuilder ()
 stModEq b = do
   v_2 <- popStack
   v_1 <- popStack
-  let nc = ExprConstr $ if b
-                          then Op v_1 "==" v_2
-                          else Op v_1 "/=" v_2
+  nc <- newEConstr $ if b
+                        then Op v_1 "==" v_2
+                        else Op v_1 "/=" v_2
   cnstrsMod (AndConstr nc)
   if b
     then pushStack (ConstInt 1)
@@ -208,9 +235,9 @@ stModEq b = do
 stModITE :: Bool -> BranchBuilder ()
 stModITE b = do
   v <- popStack
-  let nc = ExprConstr $ if b
-                          then Op v "/=" (ConstInt 0)
-                          else Op v "==" (ConstInt 0)
+  nc <- newEConstr $ if b
+                        then Op v "/=" (ConstInt 0)
+                        else Op v "==" (ConstInt 0)
   cnstrsMod (AndConstr nc)
 
 stModOp :: ScriptOp -> BranchBuilder ()
@@ -239,7 +266,7 @@ stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  let nc = ExprConstr $ Op v "/=" (ConstInt 0)
+  nc <- newEConstr $ Op v "/=" (ConstInt 0)
   cnstrsMod (AndConstr nc)
 stModOp OP_RETURN = cnstrsMod (AndConstr false)
 
@@ -366,8 +393,7 @@ hashOps =
   OP_SHA1,
   OP_SHA256,
   OP_HASH160,
-  OP_HASH256,
-  OP_CHECKSIG
+  OP_HASH256
   ]
 
 disabledOps =

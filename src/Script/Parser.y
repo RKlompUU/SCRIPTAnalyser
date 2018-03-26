@@ -34,6 +34,6 @@ stmnts : if stmnts else stmnts fi stmnts { ScriptITE $2 $4 $6 }
 
 {
 
-parseError _ = error "Parse error"
+parseError t = error $ "Parse error.. " ++ show t
 
 }

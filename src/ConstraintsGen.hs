@@ -10,6 +10,7 @@ import Data.Bitcoin.Script.Types
 
 import qualified Data.ByteString as BS
 import Data.List
+import Data.Maybe
 
 genConstraints :: ScriptAST -> BConstraints
 genConstraints script
@@ -23,7 +24,7 @@ genBuildStates script
   $ runReader (genCnstrs script) (return ())
 
 type Ident = Int
-type OpIdent = String
+type OpTy = String
 data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
@@ -41,9 +42,11 @@ data Expr where
   --                          else 0
   Within :: Expr -> Expr -> Expr -> Expr
   Hash :: Expr -> Expr
+  Sig  :: Expr -> Expr -> Expr
+  MultiSig :: [Expr] -> [Expr] -> Expr
 
   Var   :: Ident -> Expr
-  Op    :: Expr -> OpIdent -> Expr -> Expr
+  Op    :: Expr -> OpTy -> Expr -> Expr
   deriving (Show)
 
 e2i :: Expr -> Int
@@ -165,6 +168,13 @@ peakStack = do
   pushStack v
   return v
 
+opStack :: OpTy -> BranchBuilder ()
+opStack op = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_2 op v_1)
+
+
 --
 -- Alternative stack operations
 --
@@ -194,51 +204,89 @@ pushsAltStack :: [Expr] -> BranchBuilder ()
 pushsAltStack es = mapM_ pushAltStack es
 
 
---withReader_ :: r' -> Reader r' a -> Reader r a
-withReader_ x m =
-  withReader (const x) m
+--
+-- Main constraint generation functions
+--
+
+branched :: (Bool -> BranchBuilder ()) ->
+            Bool ->
+            ScriptAST ->
+            ConstraintBuilder [BranchBuilder ()]
+branched f b cont = withReader (>> f b) (genCnstrs cont)
 
 genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
 genCnstrs (ScriptITE b0 b1 cont) = do
-  ss0 <- withReader (>> stModITE True)  (genCnstrs b0)
-  ss1 <- withReader (>> stModITE False) (genCnstrs b1)
+  let stModITE = (\b -> do
+                        v <- popStack
+                        nc <- newEConstr $ if b
+                                              then Op v "/=" (ConstInt 0)
+                                              else Op v "==" (ConstInt 0)
+                        cnstrsMod (AndConstr nc))
+  ss0 <- branched stModITE True b0
+  ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 genCnstrs (ScriptOp OP_EQUAL cont) = do
-  ss0 <- withReader (>> stModEq True)  (genCnstrs cont)
-  ss1 <- withReader (>> stModEq False) (genCnstrs cont)
+  let stModEq = (\b -> do
+                      v_2 <- popStack
+                      v_1 <- popStack
+                      nc <- newEConstr $ if b
+                                            then Op v_1 "==" v_2
+                                            else Op v_1 "/=" v_2
+                      cnstrsMod (AndConstr nc)
+                      if b
+                        then pushStack (ConstInt 1)
+                        else pushStack (ConstInt 0))
+  ss0 <- branched stModEq True  cont
+  ss1 <- branched stModEq False cont
   return $ ss0 ++ ss1
-genCnstrs (ScriptOp OP_EQUALVERIFY cont) = do
-  genCnstrs (ScriptOp OP_EQUAL (ScriptOp OP_VERIFY cont))
-genCnstrs (ScriptOp OP_NUMEQUALVERIFY cont) = do
-  genCnstrs (ScriptOp OP_NUMEQUAL (ScriptOp OP_VERIFY cont))
---genCnstrs (ScriptOp OP_CHECKSIG cont) = do
---  genCnstrs (ScriptOp
+genCnstrs (ScriptOp OP_CHECKSIG cont) = do
+  let stModSig = (\b -> do
+                        v_2 <- popStack
+                        v_1 <- popStack
+                        if b
+                          then do
+                            nc <- newEConstr $ Sig v_1 v_2
+                            cnstrsMod (AndConstr nc)
+                            pushStack (ConstInt 1)
+                          else
+                            pushStack (ConstInt 0))
+  ss0 <- branched stModSig True  cont
+  ss1 <- branched stModSig False cont
+  return $ ss0 ++ ss1
+genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
+  let stModMultiSig = (\b -> do
+          n_p  <- e2i <$> popStack
+          ks_p <- popsStack n_p
+          n_s  <- e2i <$> popStack
+          ks_s <- popsStack n_s
+          if b
+            then do
+              nc <- newEConstr $ MultiSig ks_s ks_p
+              cnstrsMod (AndConstr nc)
+              pushStack (ConstInt 1)
+            else
+              pushStack (ConstInt 0))
+  ss0 <- branched stModMultiSig True  cont
+  ss1 <- branched stModMultiSig False cont
+  return $ ss0 ++ ss1
+genCnstrs (ScriptOp op cont) | isJust op' =
+  genCnstrs (ScriptOp (fromJust op') (ScriptOp OP_VERIFY cont))
+  where op' = lookup op verifyAfterOps
 genCnstrs (ScriptOp op cont) = do
   withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask
   return [s]
 
-stModEq :: Bool -> BranchBuilder ()
-stModEq b = do
-  v_2 <- popStack
-  v_1 <- popStack
-  nc <- newEConstr $ if b
-                        then Op v_1 "==" v_2
-                        else Op v_1 "/=" v_2
-  cnstrsMod (AndConstr nc)
-  if b
-    then pushStack (ConstInt 1)
-    else pushStack (ConstInt 0)
+verifyAfterOps =
+  [
+  (OP_EQUALVERIFY,OP_EQUAL),
+  (OP_NUMEQUALVERIFY,OP_NUMEQUAL),
+  (OP_CHECKSIGVERIFY,OP_CHECKSIG),
+  (OP_CHECKMULTISIGVERIFY,OP_CHECKMULTISIG)
+  ]
 
 
-stModITE :: Bool -> BranchBuilder ()
-stModITE b = do
-  v <- popStack
-  nc <- newEConstr $ if b
-                        then Op v "/=" (ConstInt 0)
-                        else Op v "==" (ConstInt 0)
-  cnstrsMod (AndConstr nc)
 
 stModOp :: ScriptOp -> BranchBuilder ()
 stModOp (OP_PUSHDATA bs _) = pushStack (ConstBS bs)
@@ -325,46 +373,16 @@ stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
 stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
 stModOp OP_NOT = popStack >>= \v -> pushStack (Not v)
 stModOp OP_0NOTEQUAL = popStack >>= \v -> pushStack (Op v "/=" (ConstInt 0))
-stModOp OP_ADD = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 "+" v_2)
-stModOp OP_SUB = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_2 "-" v_1)
-stModOp OP_BOOLAND = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_2 "/\\" v_1)
-stModOp OP_BOOLOR = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_2 "\\/" v_1)
-stModOp OP_NUMEQUAL = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 "==" v_2)
-stModOp OP_NUMNOTEQUAL = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 "/=" v_2)
-stModOp OP_LESSTHAN = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 "<" v_2)
-stModOp OP_GREATERTHAN = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 ">" v_2)
-stModOp OP_LESSTHANOREQUAL = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 "<=" v_2)
-stModOp OP_GREATERTHANOREQUAL = do
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Op v_1 ">=" v_2)
+stModOp OP_ADD = opStack "+"
+stModOp OP_SUB = opStack "-"
+stModOp OP_BOOLAND = opStack "/\\"
+stModOp OP_BOOLOR = opStack "\\/"
+stModOp OP_NUMEQUAL = opStack "=="
+stModOp OP_NUMNOTEQUAL = opStack "/="
+stModOp OP_LESSTHAN = opStack ">"
+stModOp OP_GREATERTHAN = opStack "<"
+stModOp OP_LESSTHANOREQUAL = opStack ">="
+stModOp OP_GREATERTHANOREQUAL = opStack "<="
 stModOp OP_MIN = do
   v_2 <- popStack
   v_1 <- popStack
@@ -378,6 +396,7 @@ stModOp OP_WITHIN = do
   v_2 <- popStack
   v_1 <- popStack
   pushStack (Within v_1 v_2 v_3)
+
 stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
 
 -- DISABLED OP_CODES

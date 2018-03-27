@@ -34,7 +34,7 @@ genBuildStates script
 
 successState :: BuildState -> Bool
 successState s =
-  (not . null) (stack s) &&
+  null (stack s) ||
   tryConvert2Int (head (stack s)) /= ConstInt 0
 
 type Ident = Int
@@ -440,6 +440,17 @@ stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr false)
 stModOp op =
   error $ "Error, no stModOp implementation for operator: " ++ show op
 
+
+flipOpSet =
+  [
+  ("+","+"),
+  ("<",">"),
+  (">","<"),
+  ("<=","=>"),
+  (">=","<="),
+  ("/\\","/\\"),
+  ("\\/","\\/")
+  ]
 
 hashOps =
   [

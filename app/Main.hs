@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy as B
 import Data.List
 
 import ConstraintsGen
+import ConstraintsSolver
 
 main :: IO ()
 main = do
@@ -34,3 +35,7 @@ main = do
       else do -- Most verbose
         let ss = genBuildStates ast
         putStrLn $ show ss
+  let cnstrs = genConstraints ast
+  let check = solveConstraints cnstrs
+  putStrLn $ "--------------------"
+  putStrLn $ show check

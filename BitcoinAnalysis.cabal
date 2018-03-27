@@ -31,6 +31,7 @@ library
       Script.AST
       Script.Parser
       ConstraintsGen
+      ConstraintsSolver
   other-modules:
       Paths_BitcoinAnalysis
       Bitcoin.Misc.BigInt

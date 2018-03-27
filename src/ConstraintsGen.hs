@@ -21,10 +21,21 @@ genConstraints script
   $ map cnstrs
   $ genBuildStates script
 
+genConstraints' :: ScriptAST -> [(BConstraints, Stack)]
+genConstraints' script
+  = map (\buildState -> (cnstrs buildState, take 1 $ stack buildState))
+  $ genBuildStates script
+
 genBuildStates :: ScriptAST -> [BuildState]
 genBuildStates script
-  = map (\s -> execState s initBuildState)
+  = filter (\buildState -> successState buildState)
+  $ map (\s -> execState s initBuildState)
   $ runReader (genCnstrs script) (return ())
+
+successState :: BuildState -> Bool
+successState s =
+  (not . null) (stack s) &&
+  tryConvert2Int (head (stack s)) /= ConstInt 0
 
 type Ident = Int
 type OpTy = String
@@ -50,7 +61,7 @@ data Expr where
 
   Var   :: Ident -> Expr
   Op    :: Expr -> OpTy -> Expr -> Expr
-  deriving (Show)
+  deriving (Show,Eq)
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
 lazy2StrictBS =

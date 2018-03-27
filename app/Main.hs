@@ -6,6 +6,8 @@ import Script.Parser
 import Data.Bitcoin.Script
 import qualified Data.ByteString.Lazy as B
 
+import Data.List
+
 import ConstraintsGen
 
 main :: IO ()
@@ -20,7 +22,15 @@ main = do
   putStrLn $ "-------------------------"
   putStrLn $ show ast
   putStrLn $ "-------------------------"
-  --let cnstrs = genConstraints ast
-  --putStrLn $ show cnstrs
-  let ss = genBuildStates ast
-  putStrLn $ show ss
+  let v = 1
+  if v == 0
+    then do -- Less verbose
+      let cnstrs = genConstraints ast
+      putStrLn $ show cnstrs
+    else if v == 1
+      then do -- More verbose
+        let cnstrs = genConstraints' ast
+        putStrLn $ intercalate "\n\n||\n\n" (map show cnstrs)
+      else do -- Most verbose
+        let ss = genBuildStates ast
+        putStrLn $ show ss

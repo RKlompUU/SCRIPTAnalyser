@@ -9,8 +9,11 @@ import Script.AST
 import Data.Bitcoin.Script.Types
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe
+
+import Bitcoin.Script.Integer
 
 genConstraints :: ScriptAST -> BConstraints
 genConstraints script
@@ -49,8 +52,26 @@ data Expr where
   Op    :: Expr -> OpTy -> Expr -> Expr
   deriving (Show)
 
+lazy2StrictBS :: BSL.ByteString -> BS.ByteString
+lazy2StrictBS =
+  BS.concat . BSL.toChunks
+
+convert2Int :: Expr -> Maybe Expr
+convert2Int (ConstInt i) = Just $ ConstInt i
+convert2Int (ConstBS bs)
+  | BS.length bs <= 4 = ConstInt <$> return (fromIntegral $ asInteger bs)
+convert2Int _ = Nothing
+
+tryConvert2Int :: Expr -> Expr
+tryConvert2Int e
+  | isJust e' = fromJust e'
+  | otherwise = e
+  where e' = convert2Int e
+
 e2i :: Expr -> Int
 e2i (ConstInt i) = i
+e2i e | isJust e' = e2i (fromJust e')
+  where e' = convert2Int e
 e2i e = error $ "Error: e2i for expr not implemented: " ++ show e
 
 e2l :: Expr -> Int
@@ -259,6 +280,7 @@ genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
           ks_p <- popsStack n_p
           n_s  <- e2i <$> popStack
           ks_s <- popsStack n_s
+          popStack -- Due to a bug in the Bitcoin implementation :)
           if b
             then do
               nc <- newEConstr $ MultiSig ks_s ks_p
@@ -395,7 +417,9 @@ stModOp OP_WITHIN = do
   v_3 <- popStack
   v_2 <- popStack
   v_1 <- popStack
-  pushStack (Within v_1 v_2 v_3)
+  pushStack (Within (tryConvert2Int v_1)
+                    (tryConvert2Int v_2)
+                    (tryConvert2Int v_3))
 
 stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
 

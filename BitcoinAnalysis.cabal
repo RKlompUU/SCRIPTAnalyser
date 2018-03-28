@@ -42,6 +42,11 @@ library
   build-depends:
       base >=4.7,
       mtl,
+      containers,
+      free,
+      range,
+      either >= 4.4.1,
+      IntervalMap,
       bytestring >= 0.10.8.1,
       base16-bytestring >= 0.1.1.6,
       binary-parser >= 0.5.5,

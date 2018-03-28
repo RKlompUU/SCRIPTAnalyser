@@ -28,14 +28,19 @@ main = do
     then do -- Less verbose
       let cnstrs = genConstraints ast
       putStrLn $ show cnstrs
+      let check = solveConstraints cnstrs
+      putStrLn $ "--------------------"
+      putStrLn $ show check
     else if v == 1
       then do -- More verbose
         let cnstrs = genConstraints' ast
         putStrLn $ intercalate "\n\n||\n\n" (map show cnstrs)
+        putStrLn $ "--------------------"
+        let checks = map (\c -> (c,solveConstraints (fst c))) cnstrs
+        putStrLn $ intercalate "\n\n||\n\n" (map showResult checks)
       else do -- Most verbose
         let ss = genBuildStates ast
         putStrLn $ show ss
-  let cnstrs = genConstraints ast
-  let check = solveConstraints cnstrs
-  putStrLn $ "--------------------"
-  putStrLn $ show check
+  where showResult (c,r) = case r of
+                            Left e -> "Solving for: " ++ show c ++ "\n::" ++ e
+                            Right r' -> "Solving for: " ++ show c ++ "\n::" ++ show r'

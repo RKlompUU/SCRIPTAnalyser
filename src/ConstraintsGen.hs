@@ -28,14 +28,9 @@ genConstraints' script
 
 genBuildStates :: ScriptAST -> [BuildState]
 genBuildStates script
-  = filter (\buildState -> successState buildState)
-  $ map (\s -> execState s initBuildState)
+  = map (\s -> execState (s >> finalizeBranch) initBuildState)
   $ runReader (genCnstrs script) (return ())
 
-successState :: BuildState -> Bool
-successState s =
-  null (stack s) ||
-  tryConvert2Int (head (stack s)) /= ConstInt 0
 
 type Ident = Int
 type OpTy = String
@@ -239,6 +234,13 @@ pushsAltStack es = mapM_ pushAltStack es
 --
 -- Main constraint generation functions
 --
+
+
+finalizeBranch :: BranchBuilder ()
+finalizeBranch = do
+  e <- popStack
+  nc <- newEConstr $ Op e "/=" (ConstInt 0)
+  cnstrsMod (AndConstr nc)
 
 branched :: (Bool -> BranchBuilder ()) ->
             Bool ->

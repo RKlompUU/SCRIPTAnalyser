@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs #-}
-module ConstraintsSolver where
+module Constraints.Solver where
 
-import ConstraintsGen
+import Constraints.Gen
 import Control.Monad.State.Lazy
 import Control.Monad.Except
 import Control.Applicative
@@ -11,6 +11,8 @@ import qualified Data.Map.Lazy as M
 
 import qualified Data.Range.Range as R
 import qualified Data.Range.Algebra as RA
+
+import qualified Debug.Trace as D
 
 data VConstraint =
   VConstraint {
@@ -32,7 +34,7 @@ data VConstraintsBuilder =
   VConstraintsBuilder {
     vconstrs :: VConstraints,
     info :: String
-  }
+  } deriving Show
 
 type Solver a = ExceptT Contradiction (State VConstraintsBuilder) a
 
@@ -44,9 +46,10 @@ vconstraint =
   }
 cFalse = vconstraint { intRanges = [R.SingletonRange 0],
                        bsRanges = [R.SingletonRange 1] }
-cTrue = vconstraint { intRanges = R.invert [R.SingletonRange 0],
-                      bsRanges = [R.SingletonRange 1] }
-
+cTrue = vconstraint { intRanges = R.intersection [R.SpanRange (-maxN) maxN] (R.invert [R.SingletonRange 0]),
+                      bsRanges = [R.SpanRange 0 maxIntBSL] }
+cInt = vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
+cBot = vconstraint { bsRanges = [] }
 
 maxN = 0x7fffffff -- 32 bit signed int
 maxBSL = 520 -- bytes
@@ -71,6 +74,20 @@ getDebug :: Solver String
 getDebug = lift $ do
   info <$> get
 
+
+forceInt :: Expr -> Solver VConstraint
+forceInt e = do
+  c <- genVConstraints e
+  c' <- combineVConstr c "==" cInt
+  updateVConstraint e c'
+  return c'
+
+updateVConstraint :: Expr -> VConstraint -> Solver ()
+updateVConstraint (Var x) c = lift $ do
+  cs <- get
+  put $ cs { vconstrs = M.insert x c (vconstrs cs) }
+updateVConstraint _ _ = return ()
+
 pushVConstraint :: Expr -> VConstraint -> Solver ()
 pushVConstraint (Var x) c = lift $ do
   cs <- get
@@ -92,6 +109,13 @@ solveConstraints constrs =
   case flip runState (VConstraintsBuilder M.empty "") $ runExceptT (constrsSolver constrs) of
     (Left e,_)          -> Left e
     (Right (),st) -> Right (vconstrs st)
+
+debugEConstraint :: Expr -> Either Contradiction (VConstraint, VConstraintsBuilder)
+debugEConstraint e =
+  case flip runState (VConstraintsBuilder M.empty "") $ runExceptT (genVConstraints e) of
+    (Left e,_)          -> Left e
+    (Right c,st) -> Right (c, st)
+
 
 constrsSolver :: BConstraints -> Solver ()
 constrsSolver (AndConstr b1 b2) =
@@ -115,6 +139,9 @@ genVConstraints (ConstBS bs) = do
                     else R.SpanRange (-maxN) maxN]
     , bsRanges = [R.SingletonRange (BS.length bs)]
   }
+genVConstraints (Var x) =
+  getVConstr x
+
 genVConstraints (Hash x) =
   return $ vconstraint { bsRanges = [R.SingletonRange hashOutBL] }
 genVConstraints (Sig sig pub) = do
@@ -125,13 +152,35 @@ genVConstraints (Sig sig pub) = do
   return $ vconstraint
 genVConstraints (Op (Var x) op (Var y)) = do
   pushVConstraint (Var x) (VSubst op y)
-  return $ vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
+  return $ cTrue
+
+genVConstraints (Op e1 "-" e2) = do
+  c1 <- forceInt e1
+  c2 <- forceInt e2
+  let l = R.lowestBound (intRanges c1)
+      h = R.highestBound (intRanges c1)
+  let c' = c1 {
+      intRanges = R.shiftLows (\x -> x - h) $ R.shiftHighs (\x -> x - l) $ intRanges c2
+  }
+  verifyC c'
+genVConstraints (Op e1 "<=" e2) = do
+  c1 <- forceInt e1
+  c2 <- forceInt e2
+  let c' = cInt --{
+ --     We really don't know this yet. Unsafe
+ --     intRanges = [R.SpanRange (-maxN) (R.lowestBound (intRanges c2))]
+  --}
+  pushVConstraint e1 c'
+  return $ cTrue
+genVConstraints (Op e1 "<" e2) =
+  genVConstraints (Op e1 "<=" (Op e2 "-" (ConstInt 1)))
 genVConstraints e_@(Op (Var x) op e) = do
   c1  <- genVConstraints e
   c2  <- getVConstr x
-  c2' <- debug ("combining vconstrs for: " ++ show e_) $ combineVConstr c2 op c1
+  c2' <- combineVConstr c2 op c1
   pushVConstraint (Var x) c2'
-  return $ vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
+  return $ c2' -- vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
+
 genVConstraints (Op e op (Var x))
   | isJust op' = genVConstraints (Op (Var x) op e)
   where op' = lookup op flipOpSet
@@ -141,6 +190,17 @@ genVConstraints (Op e1 op e2) = do
   c1 <- genVConstraints e1
   c2 <- genVConstraints e2
   combineVConstr c1 op c2
+
+genVConstraints (Length e) = do
+  return vconstraint
+genVConstraints e =
+  throwError' $ "genVConstraints " ++ show e ++ " not implemented"
+
+verifyC :: VConstraint -> Solver VConstraint
+verifyC c =
+  if validVConstr c
+    then return c
+    else throwError' $ "**********\ninvalid combine result: " ++ show c
 
 combineRule :: VConstraint ->
                ([R.Range Int] -> [R.Range Int] -> [R.Range Int]) ->
@@ -153,20 +213,25 @@ combineRule c1 f1 f2 c2 =
     , bsRanges = f2 (bsRanges c1) (bsRanges c2)
   }
 
+
+debugCombineVConstr :: VConstraint -> OpTy -> VConstraint -> Either Contradiction VConstraint
+debugCombineVConstr c1 op c2 =
+  case flip runState (VConstraintsBuilder M.empty "") $ runExceptT (combineVConstr c1 op c2) of
+    (Left e,_)   -> Left e
+    (Right c,st) -> Right c
+
 combineVConstr :: VConstraint -> OpTy -> VConstraint -> Solver VConstraint
-combineVConstr c1 "/\\" c2 = do
-  verifyTrue c1
-  verifyTrue c2
-combineVConstr c1 "\\/" c2 = do
-  verifyTrue c1 <|> verifyTrue c2
-combineVConstr c1 op c2 = do
+combineVConstr c1 "/\\" c2 = verifyTrue c1 >> verifyTrue c2 >> return cTrue
+combineVConstr c1 "\\/" c2 = (verifyTrue c1 <|> verifyTrue c2) >> return cTrue
+combineVConstr c1 op c2 = do -- The boolean base variants
   let c' = combineRule c1 (fst $ f op) (snd $ f op) c2
   if validVConstr c'
     then return c'
     else throwError' $ "**********\ninvalid combine result: " ++ show c' ++ ", created on:\n" ++ show c1 ++ "\nON OP[" ++ op ++ "]\n" ++ show c2
   where f :: OpTy -> ([R.Range Int] -> [R.Range Int] -> [R.Range Int], [R.Range Int] -> [R.Range Int] -> [R.Range Int])
         f "==" = (R.intersection, R.intersection)
-        f "/=" = (R.difference, R.union)
+        f "/=" = (\r1 r2 -> R.intersection (intRanges vconstraint) $ R.difference r1 r2, R.union)
+        f op   = (R.intersection, (const . const) [])
 combineVConstr _ op _ =
   throwError' $ "combineVConstr not implemented yet for operator: " ++ show op
 

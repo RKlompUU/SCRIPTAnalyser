@@ -12,7 +12,11 @@ module Data.Range.Range (
       union,
       intersection,
       difference,
-      fromRanges
+      fromRanges,
+      lowestBound,
+      highestBound,
+      shiftHighs,
+      shiftLows
    ) where
 
 import Data.Range.Data
@@ -99,3 +103,42 @@ fromRanges = concatMap fromRange
          InfiniteRange -> zero : takeEvenly (tail $ iterate succ zero) (tail $ iterate pred zero)
             where
                zero = toEnum 0
+
+lowestBound :: (Ord a, Enum a) => [Range a] -> a
+lowestBound r = minimum $ map lowerBound r
+
+lowerBound :: (Ord a, Enum a) => Range a -> a
+lowerBound (SingletonRange x) = x
+lowerBound (SpanRange x _) = x
+lowerBound (LowerBoundRange x) = x
+lowerBound (UpperBoundRange x) = last $ iterate pred x
+lowerBound InfiniteRange = undefined
+
+highestBound :: (Ord a, Enum a) => [Range a] -> a
+highestBound r = minimum $ map lowerBound r
+
+higherBound :: (Ord a, Enum a) => Range a -> a
+higherBound (SingletonRange x) = x
+higherBound (SpanRange _ x) = x
+higherBound (LowerBoundRange x) = last $ iterate succ x
+higherBound (UpperBoundRange x) = x
+higherBound InfiniteRange = undefined
+
+shiftLower :: (Num a, Show a) => (a -> a) -> Range a -> Range a
+shiftLower f (SingletonRange x) = SingletonRange (f x)
+shiftLower f (SpanRange x y) = SpanRange (f x) y
+shiftLower f (UpperBoundRange x) = UpperBoundRange x
+shiftLower _ r = error $ "shiftHigher not implemented for: " ++ show r
+
+shiftHigher :: (Num a, Show a) => (a -> a) -> Range a -> Range a
+shiftHigher f (SingletonRange x) = SingletonRange (f x)
+shiftHigher f (SpanRange x y) = SpanRange x (f y)
+shiftHigher f (LowerBoundRange x) = LowerBoundRange x
+shiftHigher _ r = error $ "shiftHigher not implemented for: " ++ show r
+
+shiftHighs :: (Num a, Show a) => (a -> a) -> [Range a] -> [Range a]
+shiftHighs f rs = map (shiftHigher f) rs
+
+shiftLows :: (Num a, Show a) => (a -> a) -> [Range a] -> [Range a]
+shiftLows f rs = map (shiftLower f) rs
+

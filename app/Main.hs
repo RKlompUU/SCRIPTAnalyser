@@ -8,8 +8,8 @@ import qualified Data.ByteString.Lazy as B
 
 import Data.List
 
-import ConstraintsGen
-import ConstraintsSolver
+import Constraints.Gen
+import Constraints.Solver
 
 main :: IO ()
 main = do

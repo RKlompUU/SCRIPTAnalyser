@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs #-}
-module ConstraintsGen where
+module Constraints.Gen where
 
 import Control.Monad.Trans.Reader
 import Control.Monad.State.Lazy
@@ -46,10 +46,7 @@ data Expr where
   Not :: Expr -> Expr
   Min :: Expr -> Expr -> Expr
   Max :: Expr -> Expr -> Expr
-  -- Within: \x min max -> if min <= x <= max
-  --                          then 1
-  --                          else 0
-  Within :: Expr -> Expr -> Expr -> Expr
+
   Hash :: Expr -> Expr
   Sig  :: Expr -> Expr -> Expr
   MultiSig :: [Expr] -> [Expr] -> Expr
@@ -427,12 +424,10 @@ stModOp OP_MAX = do
   v_1 <- popStack
   pushStack (Max v_1 v_2)
 stModOp OP_WITHIN = do
-  v_3 <- popStack
-  v_2 <- popStack
-  v_1 <- popStack
-  pushStack (Within (tryConvert2Int v_1)
-                    (tryConvert2Int v_2)
-                    (tryConvert2Int v_3))
+  v_3 <- popStack -- max    |
+  v_2 <- popStack -- min    | min <= x < max
+  v_1 <- popStack -- x      |
+  pushStack (Op (Op v_2 "<=" v_1) "/\\" (Op v_1 "<" v_3))
 
 stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
 
@@ -445,6 +440,8 @@ stModOp op =
 
 flipOpSet =
   [
+  ("==","=="),
+  ("/=","/="),
   ("+","+"),
   ("<",">"),
   (">","<"),

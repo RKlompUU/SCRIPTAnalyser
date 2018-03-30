@@ -44,6 +44,7 @@ library
       mtl,
       containers,
       free,
+      list-t,
       range,
       either >= 4.4.1,
       IntervalMap,

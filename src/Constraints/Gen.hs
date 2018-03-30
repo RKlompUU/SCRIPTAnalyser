@@ -346,7 +346,7 @@ stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  nc <- newEConstr $ Op v "/=" (ConstInt 0)
+  nc <- newEConstr v -- redundant -> $ Op v "/=" (ConstInt 0)
   cnstrsMod (AndConstr nc)
 stModOp OP_RETURN = cnstrsMod (AndConstr false)
 

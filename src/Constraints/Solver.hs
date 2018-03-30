@@ -179,7 +179,7 @@ genVConstraints e_@(Op (Var x) op e) = do
   c2  <- getVConstr x
   c2' <- combineVConstr c2 op c1
   pushVConstraint (Var x) c2'
-  return $ c2' -- vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
+  return $ c2' -- Both <- and -> are wrong -- vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
 
 genVConstraints (Op e op (Var x))
   | isJust op' = genVConstraints (Op (Var x) op e)

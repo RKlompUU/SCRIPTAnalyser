@@ -10,6 +10,7 @@ import Data.List
 
 import Constraints.Gen
 import Constraints.Solver
+import Constraints.Types
 
 main :: IO ()
 main = do
@@ -35,8 +36,12 @@ main = do
       then do -- More verbose
         let cnstrs = genConstraints' ast
         putStrLn $ intercalate "\n\n||\n\n" (map show cnstrs)
+        putStrLn $ "~~~~~~~~~~~~~~~~~~~And Normalized:~~~~~~~~~~~~"
+        let cnstrs' = map (\(c,s) -> (normalize c True,s)) cnstrs
+        putStrLn $ intercalate "\n\n||\n\n" (map show cnstrs')
         putStrLn $ "--------------------"
-        let checks = map (\c -> (c,solveConstraints (fst c))) cnstrs
+        putStrLn $ "--------------------"
+        let checks = map (\c -> (c,solveConstraints (fst c))) cnstrs'
         putStrLn $ intercalate "\n\n||\n\n" (map showResult checks)
       else do -- Most verbose
         let ss = genBuildStates ast

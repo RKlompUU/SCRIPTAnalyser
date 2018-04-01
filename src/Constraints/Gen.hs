@@ -14,6 +14,7 @@ import Data.List
 import Data.Maybe
 
 import Bitcoin.Script.Integer
+import Constraints.Types
 
 genConstraints :: ScriptAST -> BConstraints
 genConstraints script
@@ -31,29 +32,6 @@ genBuildStates script
   = map (\s -> execState (s >> finalizeBranch) initBuildState)
   $ runReader (genCnstrs script) (return ())
 
-
-type Ident = Int
-type OpTy = String
-data Expr where
-  ConstInt :: Int -> Expr
-  ConstBS  :: BS.ByteString -> Expr
-
-  Length :: Expr -> Expr
-  Abs :: Expr -> Expr
-  -- Not: \v -> if v == 0
-  --              then Not(v) = 1
-  --              else Not(v) = 0
-  Not :: Expr -> Expr
-  Min :: Expr -> Expr -> Expr
-  Max :: Expr -> Expr -> Expr
-
-  Hash :: Expr -> Expr
-  Sig  :: Expr -> Expr -> Expr
-  MultiSig :: [Expr] -> [Expr] -> Expr
-
-  Var   :: Ident -> Expr
-  Op    :: Expr -> OpTy -> Expr -> Expr
-  deriving (Show,Eq)
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
 lazy2StrictBS =
@@ -81,74 +59,20 @@ e2l :: Expr -> Int
 e2l (ConstBS bs) = BS.length bs
 e2l e = error $ "Error: e2l for expr not implemented: " ++ show e
 
-false = ExprConstr $ Op (ConstInt 0) "==" (ConstInt 1)
-true  = ExprConstr $ Op (ConstInt 0) "==" (ConstInt 0)
-
-data BConstraints where
-  ExprConstr :: Expr -> BConstraints
-  AndConstr  :: BConstraints -> BConstraints -> BConstraints
-  OrConstr   :: BConstraints -> BConstraints -> BConstraints
-  LeafConstr :: BConstraints
-
-instance Show BConstraints where
-  show (ExprConstr e) = show e
-  show (AndConstr b0 b1) = show b0 ++ " && " ++ show b1
-  show (OrConstr  b0 b1) = show b0 ++ " ||\n" ++ show b1
-  show LeafConstr = "True"
-
-data BranchMutation =
-    Popped Expr Stack
-  | Pushed Expr Stack
-  | Infered BConstraints
-
-instance Show BranchMutation where
-  show (Popped e s) = "Popped " ++ show e ++ "\n\t\t |-> " ++ show s
-  show (Pushed e s) = "Pushed " ++ show e ++ "\n\t\t |-> " ++ show s
-  show (Infered c)  = "Infering that: " ++ show c
-
-type Stack = [Expr]
-data BuildState =
-  BuildState {
-    cnstrs    :: BConstraints,
-    stack     :: Stack,
-    altStack  :: Stack,
-    freshV    :: Ident,
-    freshAltV :: Ident,
-    muts      :: [BranchMutation]
-  }
-initBuildState =
-  BuildState {
-    cnstrs    = LeafConstr,
-    stack     = [],
-    altStack  = [],
-    freshV    = 0,
-    freshAltV = -1,
-    muts      = []
-  }
-
-instance Show BuildState where
-  show s = "BuildState {\n\tcnstrs: " ++ show (cnstrs s) ++
-           ",\n\tstack: " ++ show (stack s) ++
-           ",\n\taltStack: " ++ show (altStack s) ++
-           ",\n\tbranch history:\n\t.. " ++
-           intercalate "\n\t.. " (map show $ (reverse $ muts s)) ++
-           "}\n"
 
 type BranchBuilder a = State BuildState a
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
-
 
 cnstrsMod :: (BConstraints -> BConstraints) -> BranchBuilder ()
 cnstrsMod f = do
   st <- get
   put $ st {cnstrs = f $ cnstrs st}
 
-newEConstr :: Expr -> BranchBuilder BConstraints
-newEConstr e = do
-  let eConstr = ExprConstr e
+newConstr :: BConstraints -> BranchBuilder BConstraints
+newConstr c = do
   st <- get
-  put $ st {muts = Infered eConstr : muts st}
-  return eConstr
+  put $ st {muts = Infered c : muts st}
+  return c
 
 --
 -- Main stack operations
@@ -236,7 +160,7 @@ pushsAltStack es = mapM_ pushAltStack es
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
-  nc <- newEConstr $ Op e "/=" (ConstInt 0)
+  nc <- newConstr (ExprConstr e) -- redundant -> $ Op e "/=" (ConstInt 0)
   cnstrsMod (AndConstr nc)
 
 branched :: (Bool -> BranchBuilder ()) ->
@@ -249,9 +173,9 @@ genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
 genCnstrs (ScriptITE b0 b1 cont) = do
   let stModITE = (\b -> do
                         v <- popStack
-                        nc <- newEConstr $ if b
-                                              then Op v "/=" (ConstInt 0)
-                                              else Op v "==" (ConstInt 0)
+                        nc <- newConstr $ if b
+                                            then ExprConstr v
+                                            else NotConstr (ExprConstr v)
                         cnstrsMod (AndConstr nc))
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
@@ -260,9 +184,9 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
   let stModEq = (\b -> do
                       v_2 <- popStack
                       v_1 <- popStack
-                      nc <- newEConstr $ if b
-                                            then Op v_1 "==" v_2
-                                            else Op v_1 "/=" v_2
+                      nc <- newConstr $ if b
+                                            then ExprConstr $ Op v_1 "==" v_2
+                                            else ExprConstr $ Op v_1 "/=" v_2
                       cnstrsMod (AndConstr nc)
                       if b
                         then pushStack (ConstInt 1)
@@ -270,13 +194,26 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
   ss0 <- branched stModEq True  cont
   ss1 <- branched stModEq False cont
   return $ ss0 ++ ss1
+genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
+  let stMod0NotEq = (\b -> do
+                      v_1 <- popStack
+                      nc <- newConstr $ if b
+                                            then ExprConstr v_1
+                                            else NotConstr $ ExprConstr v_1
+                      cnstrsMod (AndConstr nc)
+                      if b
+                        then pushStack (ConstInt 1)
+                        else pushStack (ConstInt 0))
+  ss0 <- branched stMod0NotEq True  cont
+  ss1 <- branched stMod0NotEq False cont
+  return $ ss0 ++ ss1
 genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   let stModSig = (\b -> do
                         v_2 <- popStack
                         v_1 <- popStack
                         if b
                           then do
-                            nc <- newEConstr $ Sig v_1 v_2
+                            nc <- newConstr $ ExprConstr $ Sig v_1 v_2
                             cnstrsMod (AndConstr nc)
                             pushStack (ConstInt 1)
                           else
@@ -293,7 +230,7 @@ genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
           popStack -- Due to a bug in the Bitcoin implementation :)
           if b
             then do
-              nc <- newEConstr $ MultiSig ks_s ks_p
+              nc <- newConstr $ ExprConstr $ MultiSig ks_s ks_p
               cnstrsMod (AndConstr nc)
               pushStack (ConstInt 1)
             else
@@ -346,9 +283,9 @@ stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  nc <- newEConstr v -- redundant -> $ Op v "/=" (ConstInt 0)
+  nc <- newConstr $ ExprConstr v -- redundant -> $ Op v "/=" (ConstInt 0)
   cnstrsMod (AndConstr nc)
-stModOp OP_RETURN = cnstrsMod (AndConstr false)
+stModOp OP_RETURN = cnstrsMod (AndConstr falseConstr)
 
 stModOp OP_TOALTSTACK = do
   v <- popStack
@@ -404,7 +341,6 @@ stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
 stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
 stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
 stModOp OP_NOT = popStack >>= \v -> pushStack (Not v)
-stModOp OP_0NOTEQUAL = popStack >>= \v -> pushStack (Op v "/=" (ConstInt 0))
 stModOp OP_ADD = opStack "+"
 stModOp OP_SUB = opStack "-"
 stModOp OP_BOOLAND = opStack "/\\"
@@ -432,24 +368,11 @@ stModOp OP_WITHIN = do
 stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
 
 -- DISABLED OP_CODES
-stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr false)
+stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr falseConstr)
 
 stModOp op =
   error $ "Error, no stModOp implementation for operator: " ++ show op
 
-
-flipOpSet =
-  [
-  ("==","=="),
-  ("/=","/="),
-  ("+","+"),
-  ("<",">"),
-  (">","<"),
-  ("<=","=>"),
-  (">=","<="),
-  ("/\\","/\\"),
-  ("\\/","\\/")
-  ]
 
 hashOps =
   [

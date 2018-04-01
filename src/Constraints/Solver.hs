@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs #-}
 module Constraints.Solver where
 
+import Constraints.Types
 import Constraints.Gen
 import Control.Monad.State.Lazy
 import Control.Monad.Except
@@ -124,7 +125,7 @@ constrsSolver (OrConstr b1 b2) =
   constrsSolver b1 <|> constrsSolver b2
 constrsSolver (ExprConstr e) =
   genVConstraints e >> return ()
-constrsSolver LeafConstr =
+constrsSolver TrueConstr =
   return ()
 
 genVConstraints :: Expr -> Solver VConstraint
@@ -192,7 +193,13 @@ genVConstraints (Op e1 op e2) = do
   combineVConstr c1 op c2
 
 genVConstraints (Length e) = do
-  return vconstraint
+  c <- genVConstraints e
+  return $ c {
+    intRanges = [R.SpanRange (R.lowestBound $ bsRanges c)
+                             (R.highestBound $ bsRanges c)]
+  }
+genVConstraints (Not e) = do
+  genVConstraints (Op e "/=" (ConstInt 0))
 genVConstraints e =
   throwError' $ "genVConstraints " ++ show e ++ " not implemented"
 

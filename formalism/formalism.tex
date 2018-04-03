@@ -1,0 +1,34 @@
+\documentclass[]{article}
+
+\usepackage{ebproof}
+
+%opening
+\title{Semantics}
+\author{}
+
+\newcommand{\sep}[0]{%
+	\times
+}
+\newcommand{\HIDE}[1]{}
+\newcommand{\ty}[2]{%
+	#1 \sep |#2|%
+}
+\newcommand{\nty}[3]{%
+	#1@\{\ty{#2}{#3}\}
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\section{Eval Simulation rules}
+\input{sim_rules}
+
+\section{Solver rules}
+\input{solve_rules}
+
+\end{document}

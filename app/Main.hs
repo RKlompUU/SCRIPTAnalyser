@@ -11,6 +11,7 @@ import Data.List
 import Constraints.Gen
 import Constraints.Solver
 import Constraints.Types
+import Constraints.ToProlog
 
 main :: IO ()
 main = do
@@ -24,7 +25,7 @@ main = do
   putStrLn $ "-------------------------"
   putStrLn $ show ast
   putStrLn $ "-------------------------"
-  let v = 1
+  let v = 0
   if v == 0
     then do -- Less verbose
       let cnstrs = genConstraints ast
@@ -32,6 +33,9 @@ main = do
       let check = solveConstraints cnstrs
       putStrLn $ "--------------------"
       putStrLn $ show check
+      putStrLn $ "--------------------"
+      putStrLn $ "------------PROLOG--------"
+      putStrLn $ toProlog cnstrs
     else if v == 1
       then do -- More verbose
         let cnstrs = genConstraints' ast

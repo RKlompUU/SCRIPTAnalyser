@@ -12,23 +12,31 @@ type OpTy = String
 data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
+  EFalse   :: Expr
+  ETrue    :: Expr
 
-  Length :: Expr -> Expr
-  Abs :: Expr -> Expr
+  --Length :: Expr -> Expr
+  --Abs :: Expr -> Expr
   -- Not: \v -> if v == 0
   --              then Not(v) = 1
   --              else Not(v) = 0
-  Not :: Expr -> Expr
-  Min :: Expr -> Expr -> Expr
-  Max :: Expr -> Expr -> Expr
+  --Not :: Expr -> Expr
+  --Min :: Expr -> Expr -> Expr
+  --Max :: Expr -> Expr -> Expr
 
-  Hash :: Expr -> Expr
-  Sig  :: Expr -> Expr -> Expr
-  MultiSig :: [Expr] -> [Expr] -> Expr
+  --Hash :: Expr -> Expr
+  --Sig  :: Expr -> Expr -> Expr
+  --MultiSig :: [Expr] -> [Expr] -> Expr
 
   Var   :: Ident -> Expr
   Op    :: Expr -> OpTy -> Expr -> Expr
   deriving (Show,Eq)
+
+data EConstraint =
+  EConstraint {
+    intRanges
+
+type EConstraints = [EConstraint]
 
 flipOpSet =
   [
@@ -105,7 +113,7 @@ instance Show BranchMutation where
   show (Pushed e s) = "Pushed " ++ show e ++ "\n\t\t |-> " ++ show s
   show (Infered c)  = "Infering that: " ++ show c
 
-type Stack = [Expr]
+type Stack = [(Expr,Ty)]
 data BuildState =
   BuildState {
     cnstrs    :: BConstraints,

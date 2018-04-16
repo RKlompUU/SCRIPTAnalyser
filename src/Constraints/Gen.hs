@@ -160,7 +160,7 @@ pushsAltStack es = mapM_ pushAltStack es
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
-  nc <- newConstr (ExprConstr e) -- redundant -> $ Op e "/=" (ConstInt 0)
+  nc <- newConstr $ ExprConstr $ Op e "/=" EFalse
   cnstrsMod (AndConstr nc)
 
 branched :: (Bool -> BranchBuilder ()) ->
@@ -174,8 +174,8 @@ genCnstrs (ScriptITE b0 b1 cont) = do
   let stModITE = (\b -> do
                         v <- popStack
                         nc <- newConstr $ if b
-                                            then ExprConstr v
-                                            else NotConstr (ExprConstr v)
+                                            then ExprConstr (Op v "/=" EFalse)
+                                            else ExprConstr (Op v "==" EFalse)
                         cnstrsMod (AndConstr nc))
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
@@ -230,7 +230,7 @@ genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
           popStack -- Due to a bug in the Bitcoin implementation :)
           if b
             then do
-              nc <- newConstr $ ExprConstr $ MultiSig ks_s ks_p
+              nc <- newConstr $ undefined -- ExprConstr $ MultiSig ks_s ks_p
               cnstrsMod (AndConstr nc)
               pushStack (ConstInt 1)
             else
@@ -283,7 +283,7 @@ stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  nc <- newConstr $ ExprConstr v -- redundant -> $ Op v "/=" (ConstInt 0)
+  nc <- newConstr $ ExprConstr $ Op v "==" ETrue
   cnstrsMod (AndConstr nc)
 stModOp OP_RETURN = cnstrsMod (AndConstr falseConstr)
 

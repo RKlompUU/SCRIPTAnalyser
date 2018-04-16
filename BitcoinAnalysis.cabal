@@ -33,6 +33,7 @@ library
       Constraints.Gen
       Constraints.Solver
       Constraints.Types
+      Constraints.ToProlog
   other-modules:
       Paths_BitcoinAnalysis
       Bitcoin.Misc.BigInt

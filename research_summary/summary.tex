@@ -1,0 +1,51 @@
+\documentclass[]{article}
+
+%opening
+\title{Research Summary}
+\author{Rick Klomp}
+
+\begin{document}
+
+\maketitle
+
+\section{Pre-exercise questions}
+\subsection{What are the aims and objectives?}
+The aim is:
+\begin{itemize}
+	\item to better understand the dynamics of blockchain derived systems
+	\item to enable/improve the formal modeling itself of these systems
+ 	\item to enable/imporve the formal modeling of the machinery that is employed ontop of these systems
+	\item to automatically or semi automatically infer properties from the formal models. Properties of interest are, for example, but not limited to:
+	\begin{itemize}
+		\item Secrecy (is the secrecy of a certain value kept over the encryption-decryption path?)
+		\item Interleaving effects (can some party for example reach some for him desired, but for others undesired, state due to a certain interleaving of events)
+	\end{itemize}
+\end{itemize}
+
+\subsection{What is the motivation of the project?}
+Blockchains are a new phenomena that have some distinctive properties. They are highly concurrent in nature, have an extraordinary amount of parties participating at roughly the same time, and cannot guarantee any safety against malicious behavior (though they can guarantee the probabilities of such behavior achieving success or not).
+It is due to these properties that existing theory and practice regarding the analysis of software systems does not fit the paradigm.
+
+On the other hand, the technology presents many new possible venues for companies and startups and as such is widely, and in fact increasingly so, experimented on in practice. This provides ample motivation for building/improving a theoretical framework of Blockchain technology.
+
+\subsection{What are the main pieces of related work?}
+There has been some research performed concerning smart contracts. However, this research has only touched the surface of what may be discoverable since it applies existing modeling theory without having this adjusted to better fit the paradigm.
+
+In general our work can/should be built on top of existing knowledge from the following areas.
+\begin{itemize}
+	\item Blockchain related systems.
+	\item Modeling paradigms. In particular those that focus on modeling concurrent behavior.
+	\item Cryptography.
+\end{itemize}
+
+\subsection{What is the novel idea?}
+The notion that we must first acquire/develop a modeling paradigm that fits Blockchain technology's properties.
+
+\subsection{What are the claims or hypotheses?}
+The prototype that will be built to perform case studies should be capable to more accurately model a Blockchain's (or/and the machinery that is employed ontop of it) behavior.
+
+\subsection{What kind of evidence will be needed to support these claims or hypotheses?}
+Most evidence will likely be of theoretical nature. However, some properties of these systems are by nature stochastic. Evidence of these properties must thus be found through experimental means.
+
+A big case study will involve applying the prototype to a real implementation of Blockchain technology (at Wallet Services).
+\end{document}

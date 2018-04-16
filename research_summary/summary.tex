@@ -1,5 +1,7 @@
 \documentclass[]{article}
 
+\newcommand{\HIDE}[1]{}
+
 %opening
 \title{Research Summary}
 \author{Rick Klomp}
@@ -7,6 +9,30 @@
 \begin{document}
 
 \maketitle
+
+\section{Summary}
+Blockchains are a new phenomena that have some distinctive properties. They are highly concurrent in nature, have an extraordinary amount of parties participating at roughly the same time, and cannot guarantee any safety against malicious behavior (though they can guarantee the probabilities of such behavior achieving success or not). It is due to these properties that existing theory and practice regarding the analysis of software systems does not fit the paradigm.
+
+On the other hand, the technology presents many new possible venues for companies and startups and as such is widely, and in fact increasingly so, experimented on in practice. This provides ample motivation for defining a theoretical framework of Blockchain technology through which we can better understand the dynamics of Blockchain applications. It should provide a means to find a suitable paradigm to formally model the behavior of a Blockchain application. From the formal models we may automatically or semi-automatically prove or disprove certain properties.
+
+There has been some research performed concerning smart contracts. However, this research applies existing modeling theory without having this adjusted to better fit the paradigm, and as such only touched the surface of what may be discoverable. In general our work can be built on top of research concerning modeling paradigms (particularly those that focus on modeling concurrent behavior) and cryptography.
+
+The prototype that will be built to perform case studies should be capable to more accurately model a Blockchain's (or/and the machinery that is employed on top of it) behavior.
+
+Most evidence will likely be of theoretical nature. However, some properties of these systems are by nature stochastic. Evidence of these properties must thus be found through experimental means.
+
+A big case study will involve applying the prototype to a real implementation of Blockchain technology (at Wallet Services).
+
+
+
+
+
+
+
+
+
+\HIDE{
+\clearpage
 
 \section{Pre-exercise questions}
 \subsection{What are the aims and objectives?}
@@ -48,4 +74,8 @@ The prototype that will be built to perform case studies should be capable to mo
 Most evidence will likely be of theoretical nature. However, some properties of these systems are by nature stochastic. Evidence of these properties must thus be found through experimental means.
 
 A big case study will involve applying the prototype to a real implementation of Blockchain technology (at Wallet Services).
+
+\subsection{At what stage is the project?}
+Initial stage (2 months in).
+}
 \end{document}

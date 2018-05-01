@@ -2,16 +2,18 @@
 module Constraints.Types where
 
 import Control.Monad.State.Lazy
+import Control.Monad.Except
 
 import qualified Data.ByteString as BS
 import Data.List
 import Data.Maybe
 import qualified Data.Map.Lazy as M
+import qualified Data.Range.Range as R
 
 import qualified Debug.Trace as D
 
 type Ident = Int
-type OpTy = String
+type OpIdent = String
 data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
@@ -32,8 +34,8 @@ data Expr where
   --MultiSig :: [Expr] -> [Expr] -> Expr
 
   Var   :: Ident -> Expr
-  Op    :: Expr -> OpTy -> Expr -> Expr
-  deriving (Show,Eq)
+  Op    :: Expr -> OpIdent -> Expr -> Expr
+  deriving (Show,Eq,Ord)
 
 
 maxN = 0x7fffffff -- 32 bit signed int
@@ -49,6 +51,7 @@ data Ty =
       bsRanges  :: [R.Range Int]   -- ByteString representation length bounds
     }
   | NTy Ident -- Named type (instantiable in forall. closure)
+  deriving (Show)
 
 int :: Ty
 int =
@@ -74,14 +77,14 @@ false =
 
 bsTy :: BS.ByteString -> Ty
 bsTy bs
-  | BS.length <= maxIntBSL
+  | BS.length bs <= maxIntBSL
   = int { bsRanges = [R.SingletonRange (BS.length bs)] }
   | otherwise
   = Ty { intRanges = [],
          bsRanges = [R.SingletonRange (BS.length bs)] }
 
 
-opTys :: Op -> BranchBuilder (Ty,Ty,Ty)
+opTys :: OpIdent -> BranchBuilder (Ty,Ty,Ty)
 opTys "=="  = do
   nTy <- genNTy
   return $ (nTy,nTy,bool)
@@ -95,22 +98,31 @@ opTys "+"   = return $ (int,int,bool)
 opTys "-"   = return $ (int,int,bool)
 
 tySet :: Expr -> Ty -> BranchBuilder ()
-tySet e t' =
+tySet e t' = do
   st <- get
-  let t = (cnstrs st) M.?! e
-  t_ <- case t of
-          Just t_   -> tySubst t t'
-          otherwise -> return t'
-  put (st {cnstrs = M.insert e t_ (constrs st)})
+  let maybeT = (cnstrs st) M.!? e
+  t_ <- case maybeT of
+          Just t -> tySubst t t'
+          otherwise  -> return t'
+  put (st {cnstrs = M.insert e t_ (cnstrs st)})
 
 tyGet :: Expr -> BranchBuilder Ty
-tyGet e =
+tyGet e = do
   st <- get
   case M.lookup e (cnstrs st) of
     Just t  -> return t
     Nothing -> throwError ("tyGet called for unmapped expression: " ++ show e)
 
-type BranchBuilder a = State BuildState a
+type BranchBuilder a = ExceptT String (State BuildState) a
+
+failBranch :: String -> BranchBuilder a
+failBranch = throwError
+
+unwrapBuildMonad :: BranchBuilder a -> Maybe BuildState
+unwrapBuildMonad b =
+  case flip runState (initBuildState) $ runExceptT b of
+    (Left e,_)    -> Nothing
+    (Right _,st) -> Just st
 
 type Stack = [Expr]
 data BuildState =
@@ -131,7 +143,7 @@ initBuildState =
     nTy       = 0,
     muts      = []
   }
-genNTy :: BranchBuilder Ident
+genNTy :: BranchBuilder Ty
 genNTy = do
   st <- get
   put (st {nTy = nTy st + 1})
@@ -144,7 +156,7 @@ tySubst (NTy n) t =
   throwError "tySubst not (yet) implemented for 1 NTy arg"
 tySubst t n@(NTy _) =
   tySubst n t
-tySubst t1 t2 =
+tySubst t1 t2 = do
   let t' = Ty { intRanges = R.intersection (intRanges t1) (intRanges t2),
                 bsRanges  = R.intersection (bsRanges t1) (bsRanges t2) }
   tyOK t'
@@ -154,7 +166,7 @@ tyOK :: Ty -> BranchBuilder ()
 tyOK t
   | (not . null) (bsRanges t) &&
     ((not . null) (intRanges t) ||
-     (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges c))) = return ()
+     (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges t))) = return ()
   | otherwise = throwError ("ty NOT OK")
 
 
@@ -166,14 +178,14 @@ data BranchMutation =
 instance Show BranchMutation where
   show (Popped e s) = "Popped " ++ show e ++ "\n\t\t |-> " ++ show s
   show (Pushed e s) = "Pushed " ++ show e ++ "\n\t\t |-> " ++ show s
-  show (Infered e t)  = "Infering that: " ++ show e ++ " :: " ++ t
+  show (Infered e t)  = "Infering that: " ++ show e ++ " :: " ++ show t
 
 
 
 instance Show BuildState where
   show s = "BuildState {\n\tcnstrs: " ++ show (cnstrs s) ++
            ",\n\tstack: " ++ show (stack s) ++
-           ",\n\taltStack: " ++ show (altStack s) ++
+          -- ",\n\taltStack: " ++ show (altStack s) ++
            ",\n\tbranch history:\n\t.. " ++
            intercalate "\n\t.. " (map show $ (reverse $ muts s)) ++
            "}\n"

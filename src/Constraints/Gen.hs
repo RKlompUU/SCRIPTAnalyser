@@ -16,10 +16,13 @@ import Data.Maybe
 import Bitcoin.Script.Integer
 import Constraints.Types
 
-genConstraints :: ScriptAST -> BConstraints
+import qualified Data.Map as M
+
+type BConstraints = M.Map Expr Ty
+
+genConstraints :: ScriptAST -> [BConstraints]
 genConstraints script
-  = foldl1 OrConstr
-  $ map cnstrs
+  = map cnstrs
   $ genBuildStates script
 
 genConstraints' :: ScriptAST -> [(BConstraints, Stack)]
@@ -29,9 +32,9 @@ genConstraints' script
 
 genBuildStates :: ScriptAST -> [BuildState]
 genBuildStates script
-  = map (\s -> execState (s >> finalizeBranch) initBuildState)
+  = mapMaybe unwrapBuildMonad
+  $ map (\s -> s >> finalizeBranch)
   $ runReader (genCnstrs script) (return ())
-
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
 lazy2StrictBS =
@@ -62,16 +65,6 @@ e2l e = error $ "Error: e2l for expr not implemented: " ++ show e
 
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
 
-cnstrsMod :: (BConstraints -> BConstraints) -> BranchBuilder ()
-cnstrsMod f = do
-  st <- get
-  put $ st {cnstrs = f $ cnstrs st}
-
-newConstr :: BConstraints -> BranchBuilder BConstraints
-newConstr c = do
-  st <- get
-  put $ st {muts = Infered c : muts st}
-  return c
 
 --
 -- Main stack operations
@@ -113,8 +106,8 @@ pushStack_ e = do
   t <- tyGet e
   pushStack e t
 
-pushsStack__ :: [Expr] -> BranchBuilder ()
-pushsStack__ es = mapM_ pushStack_ es
+pushsStack_ :: [Expr] -> BranchBuilder ()
+pushsStack_ es = mapM_ pushStack_ es
 
 peakStack :: BranchBuilder Expr
 peakStack = do
@@ -122,11 +115,11 @@ peakStack = do
   pushStack_ v
   return v
 
-opStack :: OpTy -> BranchBuilder ()
+opStack :: OpIdent -> BranchBuilder ()
 opStack op = do
   v_2 <- popStack
   v_1 <- popStack
-  let (t_1,t_2,t_r) = opTys op
+  (t_1,t_2,t_r) <- opTys op
   tySet v_1 t_1
   tySet v_2 t_2
   pushStack (Op v_2 op v_1) t_r
@@ -135,7 +128,7 @@ opStack op = do
 --
 -- Alternative stack operations
 --
-/* Alststack ignored for now
+{- Alststack ignored for now
 genAltV :: BranchBuilder Expr
 genAltV = do
   st <- get
@@ -159,7 +152,7 @@ pushAltStack e = do
 
 pushsAltStack :: [Expr] -> BranchBuilder ()
 pushsAltStack es = mapM_ pushAltStack es
-*/
+-}
 
 --
 -- Main constraint generation functions
@@ -169,8 +162,7 @@ pushsAltStack es = mapM_ pushAltStack es
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
-  nc <- newConstr $ ExprConstr $ Op e "/=" EFalse
-  cnstrsMod (AndConstr nc)
+  tySet e true
 
 branched :: (Bool -> BranchBuilder ()) ->
             Bool ->
@@ -184,7 +176,7 @@ genCnstrs (ScriptITE b0 b1 cont) = do
                       v <- popStack
                       if b
                         then tySet v true
-                        else tySet v false
+                        else tySet v false)
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
@@ -196,7 +188,7 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
                         then tySet (Op v_1 "==" v_2) true >>
                              pushStack (ConstInt 1) true
                         else tySet (Op v_1 "==" v_2) false >>
-                             pushStack (ConstInt 0) false
+                             pushStack (ConstInt 0) false)
   ss0 <- branched stModEq True  cont
   ss1 <- branched stModEq False cont
   return $ ss0 ++ ss1
@@ -204,15 +196,15 @@ genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
   let stMod0NotEq = (\b -> do
                       v_1 <- popStack
                       if b
-                        then setTy v_1 true >>
+                        then tySet v_1 true >>
                              pushStack (ConstInt 1) true
-                        else setTy v_1 false >>
-                             pushStack (ConstInt 0) false
+                        else tySet v_1 false >>
+                             pushStack (ConstInt 0) false)
   ss0 <- branched stMod0NotEq True  cont
   ss1 <- branched stMod0NotEq False cont
   return $ ss0 ++ ss1
 
-/*
+{-
 genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   let stModSig = (\b -> do
                         v_2 <- popStack
@@ -227,9 +219,9 @@ genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   ss0 <- branched stModSig True  cont
   ss1 <- branched stModSig False cont
   return $ ss0 ++ ss1
-*/
+-}
 
-/*
+{-
 genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
   let stModMultiSig = (\b -> do
           n_p  <- e2i <$> popStack
@@ -247,7 +239,7 @@ genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
   ss0 <- branched stModMultiSig True  cont
   ss1 <- branched stModMultiSig False cont
   return $ ss0 ++ ss1
-*/
+-}
 
 genCnstrs (ScriptOp op cont) | isJust op' =
   genCnstrs (ScriptOp (fromJust op') (ScriptOp OP_VERIFY cont))
@@ -297,14 +289,14 @@ stModOp OP_VERIFY = do
   tySet v true
 stModOp OP_RETURN = tySet (ConstInt 0) true -- i.e. make current branch invalid
 
-/*
+{-
 stModOp OP_TOALTSTACK = do
   v <- popStack
   pushAltStack v
 stModOp OP_FROMALTSTACK = do
   v <- popAltStack
   pushStack v
-*/
+-}
 stModOp OP_DEPTH = do
   depth <- length . stack <$> get
   pushStack (ConstInt depth) int
@@ -347,14 +339,14 @@ stModOp OP_2OVER = popsStack 4 >>= \vs -> pushsStack_ (vs ++ drop 2 vs)
 stModOp OP_2ROT = popsStack 6 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 
-/*
+{-
 stModOp OP_SIZE = peakStack >>= \v -> pushStack (Length v)
 stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))
 stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
 stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
 stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
 stModOp OP_NOT = popStack >>= \v -> pushStack (Not v)
-*/
+-}
 
 stModOp OP_ADD = opStack "+"
 stModOp OP_SUB = opStack "-"
@@ -366,7 +358,7 @@ stModOp OP_LESSTHAN = opStack ">"
 stModOp OP_GREATERTHAN = opStack "<"
 stModOp OP_LESSTHANOREQUAL = opStack ">="
 stModOp OP_GREATERTHANOREQUAL = opStack "<="
-/*
+{-
 stModOp OP_MIN = do
   v_2 <- popStack
   v_1 <- popStack
@@ -380,14 +372,14 @@ stModOp OP_WITHIN = do
   v_2 <- popStack -- min    | min <= x < max
   v_1 <- popStack -- x      |
   pushStack (Op (Op v_2 "<=" v_1) "/\\" (Op v_1 "<" v_3))
-*/
+-}
 
-/*
+{-
 stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
-*/
+-}
 
 -- DISABLED OP_CODES
-stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr falseConstr)
+stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"
 
 stModOp op =
   error $ "Error, no stModOp implementation for operator: " ++ show op

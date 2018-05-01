@@ -3,6 +3,7 @@ module Constraints.ToProlog where
 import Constraints.Types
 import Data.List
 
+{-
 toProlog :: BConstraints -> String
 toProlog c =
   let cPL = toProlog_df c
@@ -57,3 +58,4 @@ freeVarsE (Hash e) = freeVarsE e
 freeVarsE (Sig e1 e2) = freeVarsE e1 ++ freeVarsE e2
 freeVarsE (Op e1 _ e2) = freeVarsE e1 ++ freeVarsE e2
 freeVarsE _ = []
+-}

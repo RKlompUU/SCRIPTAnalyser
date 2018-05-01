@@ -18,22 +18,21 @@ import Constraints.Types
 
 import qualified Data.Map as M
 
-type BConstraints = M.Map Expr Ty
+type BConstraints = Either String (M.Map Expr Ty)
 
 genConstraints :: ScriptAST -> [BConstraints]
 genConstraints script
-  = map cnstrs
+  = map (\s -> s >>= return . cnstrs)
   $ genBuildStates script
 
-genConstraints' :: ScriptAST -> [(BConstraints, Stack)]
+genConstraints' :: ScriptAST -> [Either String (BuildState,Stack)]
 genConstraints' script
-  = map (\buildState -> (cnstrs buildState, take 1 $ stack buildState))
+  = map (\s -> s >>= \bs -> return $ (bs, take 1 $ stack bs))
   $ genBuildStates script
 
-genBuildStates :: ScriptAST -> [BuildState]
+genBuildStates :: ScriptAST -> [Either String BuildState]
 genBuildStates script
-  = mapMaybe unwrapBuildMonad
-  $ map (\s -> s >> finalizeBranch)
+  = map (\s -> unwrapBuildMonad (s >> finalizeBranch))
   $ runReader (genCnstrs script) (return ())
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString

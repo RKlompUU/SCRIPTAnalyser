@@ -102,8 +102,8 @@ tySet e t' = do
   st <- get
   let maybeT = (cnstrs st) M.!? e
   t_ <- case maybeT of
-          Just t -> tySubst t t'
-          otherwise  -> return t'
+          Just t  -> tySubst t t'
+          Nothing -> return t'
   put (st {cnstrs = M.insert e t_ (cnstrs st)})
 
 tyGet :: Expr -> BranchBuilder Ty
@@ -118,11 +118,11 @@ type BranchBuilder a = ExceptT String (State BuildState) a
 failBranch :: String -> BranchBuilder a
 failBranch = throwError
 
-unwrapBuildMonad :: BranchBuilder a -> Maybe BuildState
+unwrapBuildMonad :: BranchBuilder a -> Either String BuildState
 unwrapBuildMonad b =
   case flip runState (initBuildState) $ runExceptT b of
-    (Left e,_)    -> Nothing
-    (Right _,st) -> Just st
+    (Left e,_)    -> Left e
+    (Right _,st) -> Right st
 
 type Stack = [Expr]
 data BuildState =

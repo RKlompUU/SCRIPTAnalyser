@@ -1,9 +1,12 @@
 {-# LANGUAGE GADTs #-}
 module Constraints.Types where
 
+import Control.Monad.State.Lazy
+
 import qualified Data.ByteString as BS
 import Data.List
 import Data.Maybe
+import qualified Data.Map.Lazy as M
 
 import qualified Debug.Trace as D
 
@@ -32,106 +35,140 @@ data Expr where
   Op    :: Expr -> OpTy -> Expr -> Expr
   deriving (Show,Eq)
 
-data EConstraint =
-  EConstraint {
-    intRanges
 
-type EConstraints = [EConstraint]
+maxN = 0x7fffffff -- 32 bit signed int
+maxBSL = 520 -- bytes
+maxIntBSL = 4
+hashOutBL = 32
+sigBL = 71
+pubBL = 65
 
-flipOpSet =
-  [
-  ("==","=="),
-  ("/=","/="),
-  ("+","+"),
-  ("<",">"),
-  (">","<"),
-  ("<=","=>"),
-  (">=","<="),
-  ("/\\","/\\"),
-  ("\\/","\\/")
-  ]
+data Ty =
+    Ty {
+      intRanges :: [R.Range Int], -- Integer bounds
+      bsRanges  :: [R.Range Int]   -- ByteString representation length bounds
+    }
+  | NTy Ident -- Named type (instantiable in forall. closure)
 
-flipOpSet' =
-  [
-  ("==",(True,"/=")),
-  ("/=",(True,"==")),
-  (">",(True,"<")),
-  ("<",(True,">")),
-  (">=",(True,"<=")),
-  ("<=",(True,">=")),
-  ("/\\",(False,"\\/")),
-  ("\\/",(False,"/\\"))
-  ]
+int :: Ty
+int =
+  Ty { intRanges = [R.SpanRange (-maxN) maxN],
+       bsRanges  = [R.SpanRange 0 maxIntBSL] }
+bool :: Ty
+bool =
+  Ty { intRanges = [R.SpanRange 0 1],
+       bsRanges  = [R.SpanRange 0 1] }
+top :: Ty
+top =
+  Ty { intRanges = [R.SpanRange (-maxN) maxN],
+       bsRanges  = [R.SpanRange 0 maxBSL] }
 
+true :: Ty
+true =
+  Ty { intRanges = [R.SingletonRange 1],
+       bsRanges  = [R.SingletonRange 1] }
+false :: Ty
+false =
+  Ty { intRanges = [R.SingletonRange 0],
+       bsRanges  = [R.SingletonRange 0] }
 
-data BConstraints where
-  ExprConstr :: Expr -> BConstraints
-  AndConstr  :: BConstraints -> BConstraints -> BConstraints
-  OrConstr   :: BConstraints -> BConstraints -> BConstraints
-  NotConstr  :: BConstraints -> BConstraints
-  TrueConstr :: BConstraints
-
-falseConstr = NotConstr TrueConstr
-
-normalize :: BConstraints -> Bool -> BConstraints
-normalize c_@(NotConstr c) b = D.trace ("normalize c_: " ++ show c_ ++ ", |----> " ++ show (normalize c (not b))) normalize c (not b)
-normalize (AndConstr c1 c2) b =
-  let c1' = normalize c1 b
-      c2' = normalize c2 b
-  in (if b then AndConstr else OrConstr) c1' c2'
-normalize (OrConstr c1 c2) b =
-  let c1' = normalize c1 b
-      c2' = normalize c2 b
-  in (if b then OrConstr else AndConstr) c1' c2'
-normalize TrueConstr True  = TrueConstr
-normalize TrueConstr False = NotConstr TrueConstr
-normalize (ExprConstr e) True = ExprConstr e
-normalize (ExprConstr e) False = ExprConstr $ flipE e
-  where flipE (Op e1 op e2)
-          | isJust flipIndex && flippingDone = Op e1 op' e2
-          | isJust flipIndex = Op (flipE e1) op' (flipE e2)
-          where flipIndex = find ((==) op . fst) flipOpSet'
-                flippingDone = (fst . snd) $ fromJust flipIndex
-                op' = (snd . snd) $ fromJust flipIndex
-        flipE e' = Not e'
+bsTy :: BS.ByteString -> Ty
+bsTy bs
+  | BS.length <= maxIntBSL
+  = int { bsRanges = [R.SingletonRange (BS.length bs)] }
+  | otherwise
+  = Ty { intRanges = [],
+         bsRanges = [R.SingletonRange (BS.length bs)] }
 
 
-instance Show BConstraints where
-  show (ExprConstr e) = show e
-  show (AndConstr b0 b1) = show b0 ++ " && " ++ show b1
-  show (OrConstr  b0 b1) = "(" ++ show b0 ++ ") || (" ++ show b1 ++ ")"
-  show (NotConstr c) = "Not (" ++ show c ++ ")"
-  show TrueConstr = "True"
+opTys :: Op -> BranchBuilder (Ty,Ty,Ty)
+opTys "=="  = do
+  nTy <- genNTy
+  return $ (nTy,nTy,bool)
+opTys "<"   = return $ (int,int,bool)
+opTys ">"   = return $ (int,int,bool)
+opTys "<="  = return $ (int,int,bool)
+opTys ">="  = return $ (int,int,bool)
+opTys "/\\" = return $ (int,int,bool)
+opTys "\\/" = return $ (int,int,bool)
+opTys "+"   = return $ (int,int,bool)
+opTys "-"   = return $ (int,int,bool)
+
+tySet :: Expr -> Ty -> BranchBuilder ()
+tySet e t' =
+  st <- get
+  let t = (cnstrs st) M.?! e
+  t_ <- case t of
+          Just t_   -> tySubst t t'
+          otherwise -> return t'
+  put (st {cnstrs = M.insert e t_ (constrs st)})
+
+tyGet :: Expr -> BranchBuilder Ty
+tyGet e =
+  st <- get
+  case M.lookup e (cnstrs st) of
+    Just t  -> return t
+    Nothing -> throwError ("tyGet called for unmapped expression: " ++ show e)
+
+type BranchBuilder a = State BuildState a
+
+type Stack = [Expr]
+data BuildState =
+  BuildState {
+    cnstrs    :: M.Map Expr Ty,
+    stack     :: Stack,
+    freshV    :: Ident,
+    nTy       :: Ident,
+    muts      :: [BranchMutation]
+--    altStack  :: Stack,   Alststack ignored for now
+--    freshAltV :: Ident,   Alststack ignored for now
+  }
+initBuildState =
+  BuildState {
+    cnstrs    = M.empty,
+    stack     = [],
+    freshV    = 0,
+    nTy       = 0,
+    muts      = []
+  }
+genNTy :: BranchBuilder Ident
+genNTy = do
+  st <- get
+  put (st {nTy = nTy st + 1})
+  return $ NTy (nTy st)
+
+tySubst :: Ty -> Ty -> BranchBuilder Ty
+tySubst (NTy n1) (NTy n2) =
+  throwError "tySubst not (yet) implemented for 2 NTy args"
+tySubst (NTy n) t =
+  throwError "tySubst not (yet) implemented for 1 NTy arg"
+tySubst t n@(NTy _) =
+  tySubst n t
+tySubst t1 t2 =
+  let t' = Ty { intRanges = R.intersection (intRanges t1) (intRanges t2),
+                bsRanges  = R.intersection (bsRanges t1) (bsRanges t2) }
+  tyOK t'
+  return t'
+
+tyOK :: Ty -> BranchBuilder ()
+tyOK t
+  | (not . null) (bsRanges t) &&
+    ((not . null) (intRanges t) ||
+     (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges c))) = return ()
+  | otherwise = throwError ("ty NOT OK")
+
 
 data BranchMutation =
     Popped Expr Stack
   | Pushed Expr Stack
-  | Infered BConstraints
+  | Infered Expr Ty
 
 instance Show BranchMutation where
   show (Popped e s) = "Popped " ++ show e ++ "\n\t\t |-> " ++ show s
   show (Pushed e s) = "Pushed " ++ show e ++ "\n\t\t |-> " ++ show s
-  show (Infered c)  = "Infering that: " ++ show c
+  show (Infered e t)  = "Infering that: " ++ show e ++ " :: " ++ t
 
-type Stack = [(Expr,Ty)]
-data BuildState =
-  BuildState {
-    cnstrs    :: BConstraints,
-    stack     :: Stack,
-    altStack  :: Stack,
-    freshV    :: Ident,
-    freshAltV :: Ident,
-    muts      :: [BranchMutation]
-  }
-initBuildState =
-  BuildState {
-    cnstrs    = TrueConstr,
-    stack     = [],
-    altStack  = [],
-    freshV    = 0,
-    freshAltV = -1,
-    muts      = []
-  }
+
 
 instance Show BuildState where
   show s = "BuildState {\n\tcnstrs: " ++ show (cnstrs s) ++
@@ -140,4 +177,3 @@ instance Show BuildState where
            ",\n\tbranch history:\n\t.. " ++
            intercalate "\n\t.. " (map show $ (reverse $ muts s)) ++
            "}\n"
-

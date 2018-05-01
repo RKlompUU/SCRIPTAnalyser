@@ -60,7 +60,6 @@ e2l (ConstBS bs) = BS.length bs
 e2l e = error $ "Error: e2l for expr not implemented: " ++ show e
 
 
-type BranchBuilder a = State BuildState a
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
 
 cnstrsMod :: (BConstraints -> BConstraints) -> BranchBuilder ()
@@ -83,6 +82,7 @@ genV = do
   st <- get
   let v = Var (freshV st)
   put $ st {freshV = freshV st + 1, muts = Popped v []: muts st}
+  tySet v top
   return $ v
 
 popStack :: BranchBuilder Expr
@@ -101,32 +101,41 @@ popsStack :: Int -> BranchBuilder [Expr]
 popsStack n =
   reverse <$> replicateM n popStack
 
-pushStack :: Expr -> BranchBuilder ()
-pushStack e = do
+pushStack :: Expr -> Ty -> BranchBuilder ()
+pushStack e t = do
+  tySet e t
   st <- get
   let stack' = e : stack st
   put $ st {stack = stack', muts = Pushed e stack' : muts st}
 
-pushsStack :: [Expr] -> BranchBuilder ()
-pushsStack es = mapM_ pushStack es
+pushStack_ :: Expr -> BranchBuilder ()
+pushStack_ e = do
+  t <- tyGet e
+  pushStack e t
+
+pushsStack__ :: [Expr] -> BranchBuilder ()
+pushsStack__ es = mapM_ pushStack_ es
 
 peakStack :: BranchBuilder Expr
 peakStack = do
   v <- popStack
-  pushStack v
+  pushStack_ v
   return v
 
 opStack :: OpTy -> BranchBuilder ()
 opStack op = do
   v_2 <- popStack
   v_1 <- popStack
-  pushStack (Op v_2 op v_1)
+  let (t_1,t_2,t_r) = opTys op
+  tySet v_1 t_1
+  tySet v_2 t_2
+  pushStack (Op v_2 op v_1) t_r
 
 
 --
 -- Alternative stack operations
 --
-
+/* Alststack ignored for now
 genAltV :: BranchBuilder Expr
 genAltV = do
   st <- get
@@ -150,7 +159,7 @@ pushAltStack e = do
 
 pushsAltStack :: [Expr] -> BranchBuilder ()
 pushsAltStack es = mapM_ pushAltStack es
-
+*/
 
 --
 -- Main constraint generation functions
@@ -172,11 +181,10 @@ branched f b cont = withReader (>> f b) (genCnstrs cont)
 genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
 genCnstrs (ScriptITE b0 b1 cont) = do
   let stModITE = (\b -> do
-                        v <- popStack
-                        nc <- newConstr $ if b
-                                            then ExprConstr (Op v "/=" EFalse)
-                                            else ExprConstr (Op v "==" EFalse)
-                        cnstrsMod (AndConstr nc))
+                      v <- popStack
+                      if b
+                        then tySet v true
+                        else tySet v false
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
@@ -184,29 +192,27 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
   let stModEq = (\b -> do
                       v_2 <- popStack
                       v_1 <- popStack
-                      nc <- newConstr $ if b
-                                            then ExprConstr $ Op v_1 "==" v_2
-                                            else ExprConstr $ Op v_1 "/=" v_2
-                      cnstrsMod (AndConstr nc)
                       if b
-                        then pushStack (ConstInt 1)
-                        else pushStack (ConstInt 0))
+                        then tySet (Op v_1 "==" v_2) true >>
+                             pushStack (ConstInt 1) true
+                        else tySet (Op v_1 "==" v_2) false >>
+                             pushStack (ConstInt 0) false
   ss0 <- branched stModEq True  cont
   ss1 <- branched stModEq False cont
   return $ ss0 ++ ss1
 genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
   let stMod0NotEq = (\b -> do
                       v_1 <- popStack
-                      nc <- newConstr $ if b
-                                            then ExprConstr v_1
-                                            else NotConstr $ ExprConstr v_1
-                      cnstrsMod (AndConstr nc)
                       if b
-                        then pushStack (ConstInt 1)
-                        else pushStack (ConstInt 0))
+                        then setTy v_1 true >>
+                             pushStack (ConstInt 1) true
+                        else setTy v_1 false >>
+                             pushStack (ConstInt 0) false
   ss0 <- branched stMod0NotEq True  cont
   ss1 <- branched stMod0NotEq False cont
   return $ ss0 ++ ss1
+
+/*
 genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   let stModSig = (\b -> do
                         v_2 <- popStack
@@ -221,6 +227,9 @@ genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   ss0 <- branched stModSig True  cont
   ss1 <- branched stModSig False cont
   return $ ss0 ++ ss1
+*/
+
+/*
 genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
   let stModMultiSig = (\b -> do
           n_p  <- e2i <$> popStack
@@ -238,6 +247,8 @@ genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
   ss0 <- branched stModMultiSig True  cont
   ss1 <- branched stModMultiSig False cont
   return $ ss0 ++ ss1
+*/
+
 genCnstrs (ScriptOp op cont) | isJust op' =
   genCnstrs (ScriptOp (fromJust op') (ScriptOp OP_VERIFY cont))
   where op' = lookup op verifyAfterOps
@@ -258,89 +269,93 @@ verifyAfterOps =
 
 
 stModOp :: ScriptOp -> BranchBuilder ()
-stModOp (OP_PUSHDATA bs _) = pushStack (ConstBS bs)
+stModOp (OP_PUSHDATA bs _) = pushStack (ConstBS bs) (bsTy bs)
 
-stModOp OP_0 = pushStack (ConstBS BS.empty)
-stModOp OP_1NEGATE = pushStack (ConstInt (-1))
-stModOp OP_1 = pushStack (ConstInt 1)
-stModOp OP_2 = pushStack (ConstInt 2)
-stModOp OP_3 = pushStack (ConstInt 3)
-stModOp OP_4 = pushStack (ConstInt 4)
-stModOp OP_5 = pushStack (ConstInt 5)
-stModOp OP_6 = pushStack (ConstInt 6)
-stModOp OP_7 = pushStack (ConstInt 7)
-stModOp OP_8 = pushStack (ConstInt 8)
-stModOp OP_9 = pushStack (ConstInt 9)
-stModOp OP_10 = pushStack (ConstInt 10)
-stModOp OP_11 = pushStack (ConstInt 11)
-stModOp OP_12 = pushStack (ConstInt 12)
-stModOp OP_13 = pushStack (ConstInt 13)
-stModOp OP_14 = pushStack (ConstInt 14)
-stModOp OP_15 = pushStack (ConstInt 15)
-stModOp OP_16 = pushStack (ConstInt 16)
+stModOp OP_0 = pushStack (ConstBS BS.empty) false
+stModOp OP_1 = pushStack (ConstInt 1) true
+stModOp OP_1NEGATE = pushStack (ConstInt (-1)) int
+stModOp OP_2 = pushStack (ConstInt 2) int
+stModOp OP_3 = pushStack (ConstInt 3) int
+stModOp OP_4 = pushStack (ConstInt 4) int
+stModOp OP_5 = pushStack (ConstInt 5) int
+stModOp OP_6 = pushStack (ConstInt 6) int
+stModOp OP_7 = pushStack (ConstInt 7) int
+stModOp OP_8 = pushStack (ConstInt 8) int
+stModOp OP_9 = pushStack (ConstInt 9) int
+stModOp OP_10 = pushStack (ConstInt 10) int
+stModOp OP_11 = pushStack (ConstInt 11) int
+stModOp OP_12 = pushStack (ConstInt 12) int
+stModOp OP_13 = pushStack (ConstInt 13) int
+stModOp OP_14 = pushStack (ConstInt 14) int
+stModOp OP_15 = pushStack (ConstInt 15) int
+stModOp OP_16 = pushStack (ConstInt 16) int
 
 stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  nc <- newConstr $ ExprConstr $ Op v "==" ETrue
-  cnstrsMod (AndConstr nc)
-stModOp OP_RETURN = cnstrsMod (AndConstr falseConstr)
+  tySet v true
+stModOp OP_RETURN = tySet (ConstInt 0) true -- i.e. make current branch invalid
 
+/*
 stModOp OP_TOALTSTACK = do
   v <- popStack
   pushAltStack v
 stModOp OP_FROMALTSTACK = do
   v <- popAltStack
   pushStack v
+*/
 stModOp OP_DEPTH = do
   depth <- length . stack <$> get
-  pushStack (ConstInt depth)
+  pushStack (ConstInt depth) int
 stModOp OP_DROP = popStack >> return ()
-stModOp OP_DUP = popStack >>= \v -> pushsStack [v,v]
+stModOp OP_DUP = popStack >>= \v -> pushsStack_ [v,v]
 stModOp OP_NIP = do
   v <- popStack
   popStack
-  pushStack v
+  pushStack_ v
 stModOp OP_OVER = do
   v2 <- popStack
   v1 <- popStack
-  pushsStack [v1,v2,v1]
+  pushsStack_ [v1,v2,v1]
 stModOp OP_PICK = do
   n <- e2i <$> popStack
   es <- popsStack (n-1)
   e_n <- popStack
-  pushsStack (e_n : es)
-  pushStack e_n
+  pushsStack_ (e_n : es)
+  pushStack_ e_n
 stModOp OP_ROLL = do
   n <- e2i <$> popStack
   es <- popsStack (n-1)
   e_n <- popStack
-  pushsStack es
-  pushStack e_n
+  pushsStack_ es
+  pushStack_ e_n
 stModOp OP_ROT = do
   v_3 <- popStack
   v_2 <- popStack
   v_1 <- popStack
-  pushsStack [v_2, v_3, v_1]
-stModOp OP_SWAP = popsStack 2 >>= \vs -> pushsStack (reverse vs)
+  pushsStack_ [v_2, v_3, v_1]
+stModOp OP_SWAP = popsStack 2 >>= \vs -> pushsStack_ (reverse vs)
 stModOp OP_TUCK = do
   v_2 <- popStack
   v_1 <- popStack
-  pushsStack [v_2, v_1, v_2]
+  pushsStack_ [v_2, v_1, v_2]
 stModOp OP_2DROP = popsStack 2 >> return ()
-stModOp OP_2DUP = popsStack 2 >>= \vs -> pushsStack (vs ++ vs)
-stModOp OP_3DUP = popsStack 3 >>= \vs -> pushsStack (vs ++ vs)
-stModOp OP_2OVER = popsStack 4 >>= \vs -> pushsStack (vs ++ drop 2 vs)
-stModOp OP_2ROT = popsStack 6 >>= \vs -> pushsStack (drop 2 vs ++ take 2 vs)
-stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack (drop 2 vs ++ take 2 vs)
+stModOp OP_2DUP = popsStack 2 >>= \vs -> pushsStack_ (vs ++ vs)
+stModOp OP_3DUP = popsStack 3 >>= \vs -> pushsStack_ (vs ++ vs)
+stModOp OP_2OVER = popsStack 4 >>= \vs -> pushsStack_ (vs ++ drop 2 vs)
+stModOp OP_2ROT = popsStack 6 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
+stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 
+/*
 stModOp OP_SIZE = peakStack >>= \v -> pushStack (Length v)
 stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))
 stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
 stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
 stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
 stModOp OP_NOT = popStack >>= \v -> pushStack (Not v)
+*/
+
 stModOp OP_ADD = opStack "+"
 stModOp OP_SUB = opStack "-"
 stModOp OP_BOOLAND = opStack "/\\"
@@ -351,6 +366,7 @@ stModOp OP_LESSTHAN = opStack ">"
 stModOp OP_GREATERTHAN = opStack "<"
 stModOp OP_LESSTHANOREQUAL = opStack ">="
 stModOp OP_GREATERTHANOREQUAL = opStack "<="
+/*
 stModOp OP_MIN = do
   v_2 <- popStack
   v_1 <- popStack
@@ -364,8 +380,11 @@ stModOp OP_WITHIN = do
   v_2 <- popStack -- min    | min <= x < max
   v_1 <- popStack -- x      |
   pushStack (Op (Op v_2 "<=" v_1) "/\\" (Op v_1 "<" v_3))
+*/
 
+/*
 stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
+*/
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = cnstrsMod (AndConstr falseConstr)

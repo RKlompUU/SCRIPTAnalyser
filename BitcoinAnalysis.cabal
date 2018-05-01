@@ -31,7 +31,7 @@ library
       Script.AST
       Script.Parser
       Constraints.Gen
-      Constraints.Solver
+    --  Constraints.Solver
       Constraints.Types
       Constraints.ToProlog
   other-modules:

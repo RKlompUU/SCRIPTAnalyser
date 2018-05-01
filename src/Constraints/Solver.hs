@@ -52,12 +52,6 @@ cTrue = vconstraint { intRanges = R.intersection [R.SpanRange (-maxN) maxN] (R.i
 cInt = vconstraint { bsRanges = [R.SpanRange 0 maxIntBSL] }
 cBot = vconstraint { bsRanges = [] }
 
-maxN = 0x7fffffff -- 32 bit signed int
-maxBSL = 520 -- bytes
-maxIntBSL = 4
-hashOutBL = 32
-sigBL = 71
-pubBL = 65
 
 
 

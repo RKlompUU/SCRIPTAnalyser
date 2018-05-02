@@ -27,7 +27,7 @@ genConstraints script
 
 genBuildStates :: ScriptAST -> [Either (BuildState,String) BuildState]
 genBuildStates script
-  = map (\s -> unwrapBuildMonad (s >> finalizeBranch))
+  = map unwrapBuildMonad
   $ runReader (genCnstrs script) (return ())
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
@@ -152,12 +152,6 @@ pushsAltStack es = mapM_ pushAltStack es
 -- Main constraint generation functions
 --
 
-
-finalizeBranch :: BranchBuilder ()
-finalizeBranch = do
-  e <- popStack
-  tySet e true
-
 branched :: (Bool -> BranchBuilder ()) ->
             Bool ->
             ScriptAST ->
@@ -168,9 +162,13 @@ genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
 genCnstrs (ScriptITE b0 b1 cont) = do
   let stModITE = (\b -> do
                       v <- popStack
+                      t <- tyGet
                       if b
-                        then tySet v true
-                        else tySet v false)
+                        then addCnstr (IsTrue v) >>
+                             tySet v true
+                        else addCnstr (Not (IsTrue v)) >>
+                             tySet v false
+                 )
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
@@ -180,9 +178,9 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
                       v_1 <- popStack
                       if b
                         then tySet (Op v_1 "==" v_2) true >>
-                             pushStack (ConstInt 1) true
+                             pushStack ETrue true
                         else tySet (Op v_1 "==" v_2) false >>
-                             pushStack (ConstInt 0) false
+                             pushStack EFalse false
                 )
   ss0 <- branched stModEq True  cont
   ss1 <- branched stModEq False cont
@@ -192,9 +190,9 @@ genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
                       v_1 <- popStack
                       if b
                         then tySet v_1 true >>
-                             (uncurry pushStack) (annotTy (ConstInt 1))
+                             (uncurry pushStack) (annotTy ETrue)
                         else tySet v_1 false >>
-                             (uncurry pushStack) (annotTy (ConstInt 0))
+                             (uncurry pushStack) (annotTy EFalse)
                     )
   ss0 <- branched stMod0NotEq True  cont
   ss1 <- branched stMod0NotEq False cont
@@ -210,10 +208,10 @@ genCnstrs (ScriptOp OP_CHECKSIG cont) = do
                             tySet v_1 skTy
                             tySet v_2 pkTy
                             tySet (Sig v_1 v_2) true
-                            (uncurry pushStack) (annotTy (ConstInt 1))
+                            (uncurry pushStack) (annotTy ETrue)
                           else do
                             tySet (Sig v_1 v_2) false
-                            (uncurry pushStack) (annotTy (ConstInt 0))
+                            (uncurry pushStack) (annotTy EFalse)
                  )
   ss0 <- branched stModSig True  cont
   ss1 <- branched stModSig False cont
@@ -262,8 +260,8 @@ verifyAfterOps =
 stModOp :: ScriptOp -> BranchBuilder ()
 stModOp (OP_PUSHDATA bs _) = (uncurry pushStack) (annotTy (ConstBS bs))
 
-stModOp OP_0 = pushStack (ConstBS BS.empty) false
-stModOp OP_1 = pushStack (ConstInt 1) true
+stModOp OP_0 = pushStack EFalse false
+stModOp OP_1 = pushStack ETrue true
 stModOp OP_1NEGATE = pushStack (ConstInt (-1)) int
 stModOp OP_2 = pushStack (ConstInt 2) int
 stModOp OP_3 = pushStack (ConstInt 3) int
@@ -285,7 +283,8 @@ stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  tySet v true
+  t <- tyGet
+  tySet v (TyVerify t)
 stModOp OP_RETURN = tySubst true false >> return () -- i.e. make current branch invalid
 
 {-

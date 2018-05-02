@@ -3,6 +3,25 @@ module Constraints.ToProlog where
 import Constraints.Types
 import Data.List
 
+cToProlog :: ValConstraint -> String
+cToProlog (C_IsTrue e) =
+  e2Prolog e
+
+e2Prolog :: Expr -> String
+e2Prolog ETrue =
+  "1"
+e2Prolog EFalse =
+  "0"
+e2Prolog (Op e1 op e2)
+  | isJust boolFDOp
+  = e2Prolog e1 ++ (fromJust boolFDOp) e2
+  where boolFDOp = find op boolFDOps
+
+boolFDOps :: [(OpIdent,String)]
+boolFDOps =
+  [("\\/", " #\\/ "),
+   ("/\\", " #/\\ ")]
+
 {-
 toProlog :: BConstraints -> String
 toProlog c =

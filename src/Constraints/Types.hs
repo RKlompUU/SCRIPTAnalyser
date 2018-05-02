@@ -121,11 +121,11 @@ opTys "-"   = return $ (toInt,toInt,int) -- Or maybe not.. because of overflow
 tySet :: Expr -> Ty -> BranchBuilder ()
 tySet e t' = do
   st <- get
-  let maybeT = (cnstrs st) M.!? e
+  let maybeT = (ty_cnstrs st) M.!? e
   t_ <- case maybeT of
           Just t  -> tySubst t t'
           Nothing -> return t'
-  put (st {cnstrs = M.insert e t_ (cnstrs st)})
+  put (st {ty_cnstrs = M.insert e t_ (ty_cnstrs st)})
 
 tyCast :: Expr -> (Ty -> Ty) -> BranchBuilder ()
 tyCast e c = do
@@ -133,14 +133,18 @@ tyCast e c = do
   t' <- cast c t
 
   st <- get
-  put (st {cnstrs = M.insert e t' (cnstrs st)})
+  put (st {ty_cnstrs = M.insert e t' (ty_cnstrs st)})
 
 tyGet :: Expr -> BranchBuilder Ty
 tyGet e = do
   st <- get
-  case M.lookup e (cnstrs st) of
+  case M.lookup e (ty_cnstrs st) of
     Just t  -> return t
     Nothing -> throwError ("tyGet called for unmapped expression: " ++ show e)
+
+data ValConstraint where
+  C_IsTrue :: Expr -> ValConstraint
+  C_Not    :: ValConstraint -> ValConstraint
 
 type BranchBuilder a = ExceptT String (State BuildState) a
 
@@ -156,17 +160,19 @@ unwrapBuildMonad b =
 type Stack = [Expr]
 data BuildState =
   BuildState {
-    cnstrs    :: M.Map Expr Ty,
-    stack     :: Stack,
-    freshV    :: Ident,
-    nTy       :: Ident,
-    muts      :: [BranchMutation]
+    ty_cnstrs  :: M.Map Expr Ty,
+    val_cnstrs :: [ValConstraint], -- Will be verified after generation of constrains, using gnu prolog
+    stack      :: Stack,
+    freshV     :: Ident,
+    nTy        :: Ident,
+    muts       :: [BranchMutation]
 --    altStack  :: Stack,   Alststack ignored for now
 --    freshAltV :: Ident,   Alststack ignored for now
   }
 initBuildState =
   BuildState {
-    cnstrs    = M.empty,
+    ty_cnstrs    = M.empty,
+    val_cnstrs = [],
     stack     = [],
     freshV    = 0,
     nTy       = 0,
@@ -219,7 +225,8 @@ instance Show BranchMutation where
 
 
 instance Show BuildState where
-  show s = "BuildState {\n\tcnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (M.toList $ cnstrs s))) ++
+  show s = "BuildState {\n\tty_cnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (M.toList $ ty_cnstrs s))) ++
+            "\n\tval_cnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (val_cnstrs s))) ++
            ",\n\tstack: " ++ show (stack s) ++
           -- ",\n\taltStack: " ++ show (altStack s) ++
            ",\n\tbranch history:\n\t.. " ++

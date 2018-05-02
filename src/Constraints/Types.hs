@@ -51,7 +51,6 @@ data Ty =
       intRanges :: [R.Range Int], -- Integer bounds
       bsRanges  :: [R.Range Int]   -- ByteString representation length bounds
     }
-  | BTy -- Bool
   | NTy Ident -- Named type (instantiable in forall. closure)
   deriving (Show)
 

@@ -385,6 +385,13 @@ stModOp OP_CHECKSIG = do
   -- tySet v_1 skTy
   -- tySet v_2 pkTy
   pushStack (Sig v_1 v_2) bool
+stModOp OP_CHECKMULTISIG = do
+  n_p  <- e2i <$> popStack
+  ks_p <- popsStack n_p
+  n_s  <- e2i <$> popStack
+  ks_s <- popsStack n_s
+  popStack -- Due to a bug in the Bitcoin implementation :)
+  pushStack (MultiSig ks_s ks_p) bool
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"

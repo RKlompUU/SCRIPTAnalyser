@@ -32,7 +32,7 @@ data Expr where
 
   Hash :: Expr -> Expr
   Sig  :: Expr -> Expr -> Expr
-  --MultiSig :: [Expr] -> [Expr] -> Expr
+  MultiSig :: [Expr] -> [Expr] -> Expr
 
   Var   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr

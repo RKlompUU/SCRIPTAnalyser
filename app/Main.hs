@@ -25,5 +25,19 @@ main = do
   putStrLn $ show ast
   putStrLn $ "-------------------------"
 
-  let cnstrs = genConstraints ast
-  putStrLn $ show cnstrs
+  let buildStates = genBuildStates ast
+  putStrLn $ dumpList buildStates
+
+dumpList :: [Either (BuildState,String) BuildState] -> String
+dumpList xs =
+  let xs' = zip xs [0..]
+      f   = \(x,i) -> "-------\n" ++ show i ++ "\n" ++
+                      case x of
+                        Left (b,e) -> "!" ++ e ++ "!\n" ++ show b ++ "\n"
+                        Right b -> dumpBuildState b ++ "\n"
+  in intercalate "\n"
+     $ map f xs'
+
+dumpBuildState :: BuildState -> String
+dumpBuildState b =
+  show b

@@ -18,19 +18,14 @@ import Constraints.Types
 
 import qualified Data.Map as M
 
-type BConstraints = Either String (M.Map Expr Ty)
+type BConstraints = Either (BuildState,String) (M.Map Expr Ty)
 
 genConstraints :: ScriptAST -> [BConstraints]
 genConstraints script
   = map (\s -> s >>= return . cnstrs)
   $ genBuildStates script
 
-genConstraints' :: ScriptAST -> [Either String (BuildState,Stack)]
-genConstraints' script
-  = map (\s -> s >>= \bs -> return $ (bs, take 1 $ stack bs))
-  $ genBuildStates script
-
-genBuildStates :: ScriptAST -> [Either String BuildState]
+genBuildStates :: ScriptAST -> [Either (BuildState,String) BuildState]
 genBuildStates script
   = map (\s -> unwrapBuildMonad (s >> finalizeBranch))
   $ runReader (genCnstrs script) (return ())
@@ -119,8 +114,8 @@ opStack op = do
   v_2 <- popStack
   v_1 <- popStack
   (t_1,t_2,t_r) <- opTys op
-  tySet v_1 t_1
-  tySet v_2 t_2
+  tyCast v_1 t_1
+  tyCast v_2 t_2
   pushStack (Op v_2 op v_1) t_r
 
 
@@ -187,7 +182,8 @@ genCnstrs (ScriptOp OP_EQUAL cont) = do
                         then tySet (Op v_1 "==" v_2) true >>
                              pushStack (ConstInt 1) true
                         else tySet (Op v_1 "==" v_2) false >>
-                             pushStack (ConstInt 0) false)
+                             pushStack (ConstInt 0) false
+                )
   ss0 <- branched stModEq True  cont
   ss1 <- branched stModEq False cont
   return $ ss0 ++ ss1
@@ -196,9 +192,10 @@ genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
                       v_1 <- popStack
                       if b
                         then tySet v_1 true >>
-                             pushStack (ConstInt 1) true
+                             (uncurry pushStack) (annotTy (ConstInt 1))
                         else tySet v_1 false >>
-                             pushStack (ConstInt 0) false)
+                             (uncurry pushStack) (annotTy (ConstInt 0))
+                    )
   ss0 <- branched stMod0NotEq True  cont
   ss1 <- branched stMod0NotEq False cont
   return $ ss0 ++ ss1
@@ -260,7 +257,7 @@ verifyAfterOps =
 
 
 stModOp :: ScriptOp -> BranchBuilder ()
-stModOp (OP_PUSHDATA bs _) = pushStack (ConstBS bs) (bsTy bs)
+stModOp (OP_PUSHDATA bs _) = (uncurry pushStack) (annotTy (ConstBS bs))
 
 stModOp OP_0 = pushStack (ConstBS BS.empty) false
 stModOp OP_1 = pushStack (ConstInt 1) true

@@ -11,6 +11,7 @@ import qualified Data.Map.Lazy as M
 import qualified Data.Range.Range as R
 
 import qualified Debug.Trace as D
+import Bitcoin.Script.Integer
 
 type Ident = Int
 type OpIdent = String
@@ -50,6 +51,7 @@ data Ty =
       intRanges :: [R.Range Int], -- Integer bounds
       bsRanges  :: [R.Range Int]   -- ByteString representation length bounds
     }
+  | BTy -- Bool
   | NTy Ident -- Named type (instantiable in forall. closure)
   deriving (Show)
 
@@ -61,41 +63,49 @@ bool :: Ty
 bool =
   Ty { intRanges = [R.SpanRange 0 1],
        bsRanges  = [R.SpanRange 0 1] }
+
+toInt :: Ty -> Ty
+toInt t =
+  Ty { intRanges = R.intersection (intRanges t) [R.SpanRange (-maxN) maxN],
+       bsRanges  = R.intersection (bsRanges t) [R.SpanRange 0 maxIntBSL] }
+toBool :: Ty -> Ty
+toBool = const bool -- Always castable. From any other type.
+
 top :: Ty
 top =
   Ty { intRanges = [R.SpanRange (-maxN) maxN],
        bsRanges  = [R.SpanRange 0 maxBSL] }
 
-true :: Ty
-true =
-  Ty { intRanges = [R.SingletonRange 1],
-       bsRanges  = [R.SingletonRange 1] }
 false :: Ty
 false =
-  Ty { intRanges = [R.SingletonRange 0],
-       bsRanges  = [R.SingletonRange 0] }
+ Ty { intRanges = [R.SingletonRange 0],
+      bsRanges  = [R.SingletonRange 0] }
 
-bsTy :: BS.ByteString -> Ty
-bsTy bs
+true :: Ty
+true =
+  Ty { intRanges = R.difference (intRanges top) (intRanges false),
+       bsRanges  = R.difference (bsRanges top) (bsRanges false) }
+
+annotTy :: Expr -> (Expr,Ty)
+annotTy e@(ConstBS bs)
   | BS.length bs <= maxIntBSL
-  = int { bsRanges = [R.SingletonRange (BS.length bs)] }
+  = (e, Ty { intRanges = [R.SingletonRange (fromIntegral $ asInteger bs)],
+             bsRanges = [R.SingletonRange (BS.length bs)] } )
   | otherwise
-  = Ty { intRanges = [],
-         bsRanges = [R.SingletonRange (BS.length bs)] }
+  = (e, Ty { intRanges = [],
+             bsRanges = [R.SingletonRange (BS.length bs)] } )
+annotTy e@(ConstInt i) =
+  (e, int { intRanges = [R.SingletonRange i] })
 
-
-opTys :: OpIdent -> BranchBuilder (Ty,Ty,Ty)
-opTys "=="  = do
-  nTy <- genNTy
-  return $ (nTy,nTy,bool)
-opTys "<"   = return $ (int,int,bool)
-opTys ">"   = return $ (int,int,bool)
-opTys "<="  = return $ (int,int,bool)
-opTys ">="  = return $ (int,int,bool)
-opTys "/\\" = return $ (int,int,bool)
-opTys "\\/" = return $ (int,int,bool)
-opTys "+"   = return $ (int,int,bool)
-opTys "-"   = return $ (int,int,bool)
+opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
+opTys "<"   = return $ (toInt,toInt,bool)
+opTys ">"   = return $ (toInt,toInt,bool)
+opTys "<="  = return $ (toInt,toInt,bool)
+opTys ">="  = return $ (toInt,toInt,bool)
+opTys "/\\" = return $ (toInt,toInt,bool)
+opTys "\\/" = return $ (toInt,toInt,bool)
+opTys "+"   = return $ (toInt,toInt,int) -- Or maybe not.. because of overflow
+opTys "-"   = return $ (toInt,toInt,int) -- Or maybe not.. because of overflow
 
 tySet :: Expr -> Ty -> BranchBuilder ()
 tySet e t' = do
@@ -105,6 +115,14 @@ tySet e t' = do
           Just t  -> tySubst t t'
           Nothing -> return t'
   put (st {cnstrs = M.insert e t_ (cnstrs st)})
+
+tyCast :: Expr -> (Ty -> Ty) -> BranchBuilder ()
+tyCast e c = do
+  t <- tyGet e
+  t' <- cast c t
+
+  st <- get
+  put (st {cnstrs = M.insert e t' (cnstrs st)})
 
 tyGet :: Expr -> BranchBuilder Ty
 tyGet e = do
@@ -118,10 +136,10 @@ type BranchBuilder a = ExceptT String (State BuildState) a
 failBranch :: String -> BranchBuilder a
 failBranch = throwError
 
-unwrapBuildMonad :: BranchBuilder a -> Either String BuildState
+unwrapBuildMonad :: BranchBuilder a -> Either (BuildState,String) BuildState
 unwrapBuildMonad b =
   case flip runState (initBuildState) $ runExceptT b of
-    (Left e,_)    -> Left e
+    (Left e,st)    -> Left (st,e)
     (Right _,st) -> Right st
 
 type Stack = [Expr]
@@ -149,6 +167,13 @@ genNTy = do
   put (st {nTy = nTy st + 1})
   return $ NTy (nTy st)
 
+cast :: (Ty -> Ty) -> Ty -> BranchBuilder Ty
+cast c t = do
+  let t' = c t
+  if tyOK t'
+    then return t'
+    else throwError ("ty NOT OK, before cast: " ++ show t)
+
 tySubst :: Ty -> Ty -> BranchBuilder Ty
 tySubst (NTy n1) (NTy n2) =
   throwError "tySubst not (yet) implemented for 2 NTy args"
@@ -159,15 +184,15 @@ tySubst t n@(NTy _) =
 tySubst t1 t2 = do
   let t' = Ty { intRanges = R.intersection (intRanges t1) (intRanges t2),
                 bsRanges  = R.intersection (bsRanges t1) (bsRanges t2) }
-  tyOK t'
-  return t'
+  if tyOK t'
+    then return t'
+    else throwError ("ty NOT OK. Subst of: " ++ show t1 ++ ", and: " ++ show t2)
 
-tyOK :: Ty -> BranchBuilder ()
-tyOK t
-  | (not . null) (bsRanges t) &&
-    ((not . null) (intRanges t) ||
-     (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges t))) = return ()
-  | otherwise = throwError ("ty NOT OK")
+tyOK :: Ty -> Bool
+tyOK t =
+  (not . null) (bsRanges t) &&
+  ((not . null) (intRanges t) ||
+   (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges t)))
 
 
 data BranchMutation =

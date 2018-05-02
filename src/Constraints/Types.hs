@@ -21,7 +21,7 @@ data Expr where
   EFalse   :: Expr
   ETrue    :: Expr
 
-  --Length :: Expr -> Expr
+  Length :: Expr -> Expr
   --Abs :: Expr -> Expr
   -- Not: \v -> if v == 0
   --              then Not(v) = 1
@@ -105,7 +105,9 @@ annotTy e@(ConstBS bs)
 annotTy e@(ConstInt i) =
   (e, int { intRanges = [R.SingletonRange i] })
 annotTy e@(Hash _) =
-  (e, hashOutTy )
+  (e, hashOutTy)
+annotTy e@(Length _) =
+  (e, top)
 
 opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
 opTys "<"   = return $ (toInt,toInt,bool)

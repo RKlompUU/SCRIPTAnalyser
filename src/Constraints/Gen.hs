@@ -18,17 +18,17 @@ import Constraints.Types
 
 import qualified Data.Map as M
 
-type BConstraints = Either (BuildState,String) (M.Map Expr Ty)
-
-genConstraints :: ScriptAST -> [BConstraints]
-genConstraints script
-  = map (\s -> s >>= return . cnstrs)
-  $ genBuildStates script
 
 genBuildStates :: ScriptAST -> [Either (BuildState,String) BuildState]
 genBuildStates script
-  = map unwrapBuildMonad
+  = map (\s -> unwrapBuildMonad (s >> finalizeBranch))
   $ runReader (genCnstrs script) (return ())
+
+finalizeBranch :: BranchBuilder ()
+finalizeBranch = do
+  e <- popStack
+  tySet e true
+  addCnstr (C_IsTrue e)
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
 lazy2StrictBS =
@@ -162,25 +162,24 @@ genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
 genCnstrs (ScriptITE b0 b1 cont) = do
   let stModITE = (\b -> do
                       v <- popStack
-                      t <- tyGet
+                      t <- tyGet v
                       if b
-                        then addCnstr (IsTrue v) >>
+                        then addCnstr (C_IsTrue v) >>
                              tySet v true
-                        else addCnstr (Not (IsTrue v)) >>
+                        else addCnstr (C_Not (C_IsTrue v)) >>
                              tySet v false
                  )
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
+{-
 genCnstrs (ScriptOp OP_EQUAL cont) = do
   let stModEq = (\b -> do
                       v_2 <- popStack
                       v_1 <- popStack
                       if b
-                        then tySet (Op v_1 "==" v_2) true >>
-                             pushStack ETrue true
-                        else tySet (Op v_1 "==" v_2) false >>
-                             pushStack EFalse false
+                        then pushStack (Op v_1 "==" v_2) true
+                        else pushStack (Op v_1 "==" v_2) false
                 )
   ss0 <- branched stModEq True  cont
   ss1 <- branched stModEq False cont
@@ -189,16 +188,15 @@ genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
   let stMod0NotEq = (\b -> do
                       v_1 <- popStack
                       if b
-                        then tySet v_1 true >>
-                             (uncurry pushStack) (annotTy ETrue)
-                        else tySet v_1 false >>
-                             (uncurry pushStack) (annotTy EFalse)
+                        then pushStack v_1 true
+                        else pushStack v_1 false
                     )
   ss0 <- branched stMod0NotEq True  cont
   ss1 <- branched stMod0NotEq False cont
   return $ ss0 ++ ss1
+-}
 
-
+{-
 genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   let stModSig = (\b -> do
                         v_2 <- popStack
@@ -216,7 +214,7 @@ genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   ss0 <- branched stModSig True  cont
   ss1 <- branched stModSig False cont
   return $ ss0 ++ ss1
-
+-}
 
 {-
 genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
@@ -283,8 +281,8 @@ stModOp OP_NOP = return ()
 
 stModOp OP_VERIFY = do
   v <- popStack
-  t <- tyGet
-  tySet v (TyVerify t)
+  tySet v true
+  addCnstr (C_IsTrue v)
 stModOp OP_RETURN = tySubst true false >> return () -- i.e. make current branch invalid
 
 {-
@@ -376,6 +374,17 @@ stModOp OP_WITHIN = do
 
 stModOp op | any (== op) hashOps = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v))
 
+stModOp OP_EQUAL = do
+  v_2 <- popStack
+  v_1 <- popStack
+  pushStack (Op v_1 "==" v_2) bool
+stModOp OP_CHECKSIG = do
+  v_2 <- popStack
+  v_1 <- popStack
+  -- TODO; is this enforced or not? The input types of Sig
+  -- tySet v_1 skTy
+  -- tySet v_2 pkTy
+  pushStack (Sig v_1 v_2) bool
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"

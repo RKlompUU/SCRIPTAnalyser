@@ -2,6 +2,7 @@ module Constraints.ToProlog where
 
 import Constraints.Types
 import Data.List
+import Data.Maybe
 
 cToProlog :: ValConstraint -> String
 cToProlog (C_IsTrue e) =
@@ -14,8 +15,8 @@ e2Prolog EFalse =
   "0"
 e2Prolog (Op e1 op e2)
   | isJust boolFDOp
-  = e2Prolog e1 ++ (fromJust boolFDOp) e2
-  where boolFDOp = find op boolFDOps
+  = e2Prolog e1 ++ (fromJust boolFDOp) ++ e2Prolog e2
+  where boolFDOp = lookup op boolFDOps
 
 boolFDOps :: [(OpIdent,String)]
 boolFDOps =

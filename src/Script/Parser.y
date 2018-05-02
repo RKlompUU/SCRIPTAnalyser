@@ -29,7 +29,7 @@ stmnts : if stmnts else stmnts fi stmnts { ScriptITE $2 $4 $6 }
                                                         (ScriptOp OP_DROP ScriptTail)
                                                         $2 }
        | op stmnts { ScriptOp $1 $2 }
-       | { ScriptOp OP_VERIFY ScriptTail }
+       | { ScriptTail }
 
 
 {

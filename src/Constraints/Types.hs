@@ -107,6 +107,12 @@ annotTy e@(Hash _) =
   (e, hashOutTy)
 annotTy e@(Length _) =
   (e, top)
+annotTy ETrue =
+  (ETrue, true)
+annotTy EFalse =
+  (EFalse, false)
+annotTy e =
+  error $ "annotTy not implemented (yet) for " ++ show e
 
 opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
 opTys "<"   = return $ (toInt,toInt,bool)
@@ -145,6 +151,12 @@ tyGet e = do
 data ValConstraint where
   C_IsTrue :: Expr -> ValConstraint
   C_Not    :: ValConstraint -> ValConstraint
+  deriving (Show,Eq)
+
+addCnstr :: ValConstraint -> BranchBuilder ()
+addCnstr c = do
+  st <- get
+  put $ st {val_cnstrs = c : val_cnstrs st}
 
 type BranchBuilder a = ExceptT String (State BuildState) a
 

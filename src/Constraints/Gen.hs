@@ -286,7 +286,7 @@ stModOp OP_NOP = return ()
 stModOp OP_VERIFY = do
   v <- popStack
   tySet v true
-stModOp OP_RETURN = tySet (ConstInt 0) true -- i.e. make current branch invalid
+stModOp OP_RETURN = tySubst true false >> return () -- i.e. make current branch invalid
 
 {-
 stModOp OP_TOALTSTACK = do

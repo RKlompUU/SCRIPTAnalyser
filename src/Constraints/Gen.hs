@@ -200,22 +200,25 @@ genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
   ss1 <- branched stMod0NotEq False cont
   return $ ss0 ++ ss1
 
-{-
+
 genCnstrs (ScriptOp OP_CHECKSIG cont) = do
   let stModSig = (\b -> do
                         v_2 <- popStack
                         v_1 <- popStack
                         if b
                           then do
-                            nc <- newConstr $ ExprConstr $ Sig v_1 v_2
-                            cnstrsMod (AndConstr nc)
-                            pushStack (ConstInt 1)
-                          else
-                            pushStack (ConstInt 0))
+                            tySet v_1 skTy
+                            tySet v_2 pkTy
+                            tySet (Sig v_1 v_2) true
+                            (uncurry pushStack) (annotTy (ConstInt 1))
+                          else do
+                            tySet (Sig v_1 v_2) false
+                            (uncurry pushStack) (annotTy (ConstInt 0))
+                 )
   ss0 <- branched stModSig True  cont
   ss1 <- branched stModSig False cont
   return $ ss0 ++ ss1
--}
+
 
 {-
 genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
@@ -370,9 +373,9 @@ stModOp OP_WITHIN = do
   pushStack (Op (Op v_2 "<=" v_1) "/\\" (Op v_1 "<" v_3))
 -}
 
-{-
-stModOp op | any (== op) hashOps = popStack >>= \v -> pushStack (Hash v)
--}
+
+stModOp op | any (== op) hashOps = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v))
+
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"

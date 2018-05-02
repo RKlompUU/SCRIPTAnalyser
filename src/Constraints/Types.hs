@@ -30,8 +30,8 @@ data Expr where
   --Min :: Expr -> Expr -> Expr
   --Max :: Expr -> Expr -> Expr
 
-  --Hash :: Expr -> Expr
-  --Sig  :: Expr -> Expr -> Expr
+  Hash :: Expr -> Expr
+  Sig  :: Expr -> Expr -> Expr
   --MultiSig :: [Expr] -> [Expr] -> Expr
 
   Var   :: Ident -> Expr
@@ -63,6 +63,20 @@ bool :: Ty
 bool =
   Ty { intRanges = [R.SpanRange 0 1],
        bsRanges  = [R.SpanRange 0 1] }
+top :: Ty
+top =
+ Ty { intRanges = [R.SpanRange (-maxN) maxN],
+      bsRanges  = [R.SpanRange 0 maxBSL] }
+hashOutTy :: Ty
+hashOutTy =
+  Ty { intRanges = [],
+       bsRanges  = [R.SingletonRange hashOutBL] }
+skTy :: Ty -- Secret key type
+skTy =
+  top { bsRanges = [R.SpanRange 0 100] }
+pkTy :: Ty -- Public key type
+pkTy =
+ top { bsRanges = [R.SpanRange 0 100] }
 
 toInt :: Ty -> Ty
 toInt t =
@@ -71,16 +85,10 @@ toInt t =
 toBool :: Ty -> Ty
 toBool = const bool -- Always castable. From any other type.
 
-top :: Ty
-top =
-  Ty { intRanges = [R.SpanRange (-maxN) maxN],
-       bsRanges  = [R.SpanRange 0 maxBSL] }
-
 false :: Ty
 false =
  Ty { intRanges = [R.SingletonRange 0],
       bsRanges  = [R.SingletonRange 0] }
-
 true :: Ty
 true =
   Ty { intRanges = R.difference (intRanges top) (intRanges false),
@@ -96,6 +104,8 @@ annotTy e@(ConstBS bs)
              bsRanges = [R.SingletonRange (BS.length bs)] } )
 annotTy e@(ConstInt i) =
   (e, int { intRanges = [R.SingletonRange i] })
+annotTy e@(Hash _) =
+  (e, hashOutTy )
 
 opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
 opTys "<"   = return $ (toInt,toInt,bool)
@@ -208,7 +218,7 @@ instance Show BranchMutation where
 
 
 instance Show BuildState where
-  show s = "BuildState {\n\tcnstrs: " ++ show (cnstrs s) ++
+  show s = "BuildState {\n\tcnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (M.toList $ cnstrs s))) ++
            ",\n\tstack: " ++ show (stack s) ++
           -- ",\n\taltStack: " ++ show (altStack s) ++
            ",\n\tbranch history:\n\t.. " ++

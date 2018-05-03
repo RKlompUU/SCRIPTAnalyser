@@ -10,6 +10,9 @@ import Control.Monad.Writer
 type PL = String
 type PrologWriter a = ReaderT BuildState (ExceptT String (Writer PL)) a
 
+plFact :: PL -> PrologWriter PL
+plFact pl =
+  return $ pl ++ ".\n"
 
 branchToProlog :: BuildState -> Either String PL
 branchToProlog b =
@@ -20,13 +23,15 @@ branchToProlog b =
 bToProlog :: PrologWriter ()
 bToProlog = do
   css <- val_cnstrs <$> ask
-  mapM_ cToProlog css
+  pls <- mapM (\c -> cToProlog c >>= plFact) css
+  mapM_ tell pls
 
-cToProlog :: ValConstraint -> PrologWriter ()
+cToProlog :: ValConstraint -> PrologWriter PL
 cToProlog (C_IsTrue e) = do
-  pl <- e2Prolog e
-  tell pl
-  return ()
+  e2Prolog e
+cToProlog (C_Not c) = do
+  pl <- cToProlog c
+  return $ "#\\ " ++ pl
 cToProlog c =
   throwError $ "cToProlog not implemented for: " ++ show c
 
@@ -35,6 +40,8 @@ e2Prolog ETrue =
   return "1"
 e2Prolog EFalse =
   return "0"
+e2Prolog (ConstInt i) =
+  return $ show i
 e2Prolog (Op e1 op e2)
   | isJust boolFDOp
   = do
@@ -43,8 +50,10 @@ e2Prolog (Op e1 op e2)
   p2 <- e2Prolog e2
   return $ p1 ++ pOp ++ p2
   where boolFDOp = lookup op boolFDOps
+e2Prolog (Var n) =
+  return $ "X" ++ show n
 e2Prolog e =
-  throwError $ "e2Prolog nog implemented for: " ++ show e
+  throwError $ "e2Prolog not implemented for: " ++ show e
 
 boolFDOps :: [(OpIdent,String)]
 boolFDOps =

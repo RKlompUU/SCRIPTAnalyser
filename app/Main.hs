@@ -33,16 +33,16 @@ main = do
   putStrLn $ "-------------------------"
   let successBuilds = mapMaybe (either (const Nothing) Just) buildStates
 
-  let pls = map branchToProlog successBuilds
+  let pls = map (either id id)
+          $ map branchToProlog successBuilds
   putStrLn $ "-------------------------"
   putStrLn $ dumpList pls
   putStrLn $ "-------------------------"
 
 
-dumpList :: Show a => [a] -> String
+dumpList :: [String] -> String
 dumpList xs =
-  intercalate "\n-----------\n"
-  $ map show xs
+  intercalate "\n-----------\n" xs
 
 dumpBuildStates :: [Either (BuildState,String) BuildState] -> String
 dumpBuildStates xs =

@@ -82,7 +82,7 @@ toInt t =
   Ty { intRanges = R.intersection (intRanges t) [R.SpanRange (-maxN) maxN],
        bsRanges  = R.intersection (bsRanges t) [R.SpanRange 0 maxIntBSL] }
 toBool :: Ty -> Ty
-toBool = const bool -- Always castable. From any other type.
+toBool = id -- Always castable. From any other type.
 
 false :: Ty
 false =

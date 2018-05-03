@@ -258,24 +258,24 @@ verifyAfterOps =
 stModOp :: ScriptOp -> BranchBuilder ()
 stModOp (OP_PUSHDATA bs _) = (uncurry pushStack) (annotTy (ConstBS bs))
 
-stModOp OP_0 = pushStack EFalse false
-stModOp OP_1 = pushStack ETrue true
-stModOp OP_1NEGATE = pushStack (ConstInt (-1)) int
-stModOp OP_2 = pushStack (ConstInt 2) int
-stModOp OP_3 = pushStack (ConstInt 3) int
-stModOp OP_4 = pushStack (ConstInt 4) int
-stModOp OP_5 = pushStack (ConstInt 5) int
-stModOp OP_6 = pushStack (ConstInt 6) int
-stModOp OP_7 = pushStack (ConstInt 7) int
-stModOp OP_8 = pushStack (ConstInt 8) int
-stModOp OP_9 = pushStack (ConstInt 9) int
-stModOp OP_10 = pushStack (ConstInt 10) int
-stModOp OP_11 = pushStack (ConstInt 11) int
-stModOp OP_12 = pushStack (ConstInt 12) int
-stModOp OP_13 = pushStack (ConstInt 13) int
-stModOp OP_14 = pushStack (ConstInt 14) int
-stModOp OP_15 = pushStack (ConstInt 15) int
-stModOp OP_16 = pushStack (ConstInt 16) int
+stModOp OP_0 = (uncurry pushStack) (annotTy (ConstInt 0))
+stModOp OP_1 = (uncurry pushStack) (annotTy (ConstInt 1))
+stModOp OP_1NEGATE = (uncurry pushStack) (annotTy (ConstInt (-1)))
+stModOp OP_2 = (uncurry pushStack) (annotTy (ConstInt 2))
+stModOp OP_3 = (uncurry pushStack) (annotTy (ConstInt 3))
+stModOp OP_4 = (uncurry pushStack) (annotTy (ConstInt 4))
+stModOp OP_5 = (uncurry pushStack) (annotTy (ConstInt 5))
+stModOp OP_6 = (uncurry pushStack) (annotTy (ConstInt 6))
+stModOp OP_7 = (uncurry pushStack) (annotTy (ConstInt 7))
+stModOp OP_8 = (uncurry pushStack) (annotTy (ConstInt 8))
+stModOp OP_9 = (uncurry pushStack) (annotTy (ConstInt 9))
+stModOp OP_10 = (uncurry pushStack) (annotTy (ConstInt 10))
+stModOp OP_11 = (uncurry pushStack) (annotTy (ConstInt 11))
+stModOp OP_12 = (uncurry pushStack) (annotTy (ConstInt 12))
+stModOp OP_13 = (uncurry pushStack) (annotTy (ConstInt 13))
+stModOp OP_14 = (uncurry pushStack) (annotTy (ConstInt 14))
+stModOp OP_15 = (uncurry pushStack) (annotTy (ConstInt 15))
+stModOp OP_16 = (uncurry pushStack) (annotTy (ConstInt 16))
 
 stModOp OP_NOP = return ()
 

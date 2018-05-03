@@ -7,10 +7,11 @@ import Data.Bitcoin.Script
 import qualified Data.ByteString.Lazy as B
 
 import Data.List
+import Data.Maybe
 
 import Constraints.Gen
 import Constraints.Types
---import Constraints.ToProlog
+import Constraints.ToProlog
 
 main :: IO ()
 main = do
@@ -20,16 +21,31 @@ main = do
   let script = decode bs'
   putStrLn (show $ bs')
   putStrLn (show script)
+
   let ast = buildAST (scriptOps script)
   putStrLn $ "-------------------------"
   putStrLn $ show ast
   putStrLn $ "-------------------------"
 
   let buildStates = genBuildStates ast
-  putStrLn $ dumpList buildStates
+  putStrLn $ "-------------------------"
+  putStrLn $ dumpBuildStates buildStates
+  putStrLn $ "-------------------------"
+  let successBuilds = mapMaybe (either (const Nothing) Just) buildStates
 
-dumpList :: [Either (BuildState,String) BuildState] -> String
+  let pls = map branchToProlog successBuilds
+  putStrLn $ "-------------------------"
+  putStrLn $ dumpList pls
+  putStrLn $ "-------------------------"
+
+
+dumpList :: Show a => [a] -> String
 dumpList xs =
+  intercalate "\n-----------\n"
+  $ map show xs
+
+dumpBuildStates :: [Either (BuildState,String) BuildState] -> String
+dumpBuildStates xs =
   let xs' = zip xs [0..]
       f   = \(x,i) -> "-------\n" ++ show i ++ "\n" ++
                       case x of

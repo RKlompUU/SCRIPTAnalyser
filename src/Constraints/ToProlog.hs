@@ -3,20 +3,48 @@ module Constraints.ToProlog where
 import Constraints.Types
 import Data.List
 import Data.Maybe
+import Control.Monad.Except
+import Control.Monad.Trans.Reader
+import Control.Monad.Writer
 
-cToProlog :: ValConstraint -> String
-cToProlog (C_IsTrue e) =
-  e2Prolog e
+type PL = String
+type PrologWriter a = ReaderT BuildState (ExceptT String (Writer PL)) a
 
-e2Prolog :: Expr -> String
+
+branchToProlog :: BuildState -> Either String PL
+branchToProlog b =
+  case runWriter (runExceptT (runReaderT bToProlog b)) of
+    (Left e,_)   -> Left e
+    (Right _,pl) -> Right pl
+
+bToProlog :: PrologWriter ()
+bToProlog = do
+  css <- val_cnstrs <$> ask
+  mapM_ cToProlog css
+
+cToProlog :: ValConstraint -> PrologWriter ()
+cToProlog (C_IsTrue e) = do
+  pl <- e2Prolog e
+  tell pl
+  return ()
+cToProlog c =
+  throwError $ "cToProlog not implemented for: " ++ show c
+
+e2Prolog :: Expr -> PrologWriter PL
 e2Prolog ETrue =
-  "1"
+  return "1"
 e2Prolog EFalse =
-  "0"
+  return "0"
 e2Prolog (Op e1 op e2)
   | isJust boolFDOp
-  = e2Prolog e1 ++ (fromJust boolFDOp) ++ e2Prolog e2
+  = do
+  p1 <- e2Prolog e1
+  let pOp = fromJust boolFDOp
+  p2 <- e2Prolog e2
+  return $ p1 ++ pOp ++ p2
   where boolFDOp = lookup op boolFDOps
+e2Prolog e =
+  throwError $ "e2Prolog nog implemented for: " ++ show e
 
 boolFDOps :: [(OpIdent,String)]
 boolFDOps =

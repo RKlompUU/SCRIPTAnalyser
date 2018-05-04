@@ -12,7 +12,9 @@ type PrologWriter a = ReaderT BuildState (ExceptT String (Writer PL)) a
 
 plFact :: PL -> PrologWriter PL
 plFact pl =
-  return $ pl ++ ".\n"
+  if null pl
+    then return ""
+    else return $ pl ++ ".\n"
 
 branchToProlog :: BuildState -> Either String PL
 branchToProlog b =
@@ -31,7 +33,9 @@ cToProlog (C_IsTrue e) = do
   e2Prolog e
 cToProlog (C_Not c) = do
   pl <- cToProlog c
-  return $ "#\\ " ++ pl
+  if null pl -- Can be null if c only contains expressions that are not verifiable (e.g. Sig x y)
+    then return ""
+    else return $ "#\\ " ++ pl
 cToProlog c =
   throwError $ "cToProlog not implemented for: " ++ show c
 
@@ -43,15 +47,17 @@ e2Prolog EFalse =
 e2Prolog (ConstInt i) =
   return $ show i
 e2Prolog (Op e1 op e2)
-  | isJust boolFDOp
-  = do
-  p1 <- e2Prolog e1
-  let pOp = fromJust boolFDOp
-  p2 <- e2Prolog e2
-  return $ p1 ++ pOp ++ p2
+  | isJust boolFDOp = do
+    p1 <- e2Prolog e1
+    let pOp = fromJust boolFDOp
+    p2 <- e2Prolog e2
+    return $ p1 ++ pOp ++ p2
   where boolFDOp = lookup op boolFDOps
 e2Prolog (Var n) =
   return $ "X" ++ show n
+e2Prolog (Sig _ _) = return ""
+e2Prolog (Hash _) = return ""
+e2Prolog (MultiSig _ _) = return ""
 e2Prolog e =
   throwError $ "e2Prolog not implemented for: " ++ show e
 

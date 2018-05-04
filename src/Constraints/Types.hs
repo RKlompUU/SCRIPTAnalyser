@@ -38,7 +38,6 @@ data Expr where
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Show,Eq,Ord)
 
-
 maxN = 0x7fffffff -- 32 bit signed int
 maxBSL = 520 -- bytes
 maxIntBSL = 4
@@ -183,13 +182,39 @@ data BuildState =
   }
 initBuildState =
   BuildState {
-    ty_cnstrs    = M.empty,
+    ty_cnstrs  = M.empty,
     val_cnstrs = [],
-    stack     = [],
-    freshV    = 0,
-    nTy       = 0,
-    muts      = []
+    stack      = [],
+    freshV     = 0,
+    nTy        = 0,
+    muts       = []
   }
+
+knowledgeCnstrsWithVar :: BuildState -> [[Expr]]
+knowledgeCnstrsWithVar b =
+  map nub
+  $ map varsInC (val_cnstrs b)
+
+varsInC :: ValConstraint -> [Expr]
+varsInC (C_IsTrue e) =
+  varsInE e
+varsInC (C_Not c) = varsInC c
+
+varsInE :: Expr -> [Expr]
+varsInE (Hash e) =
+  varsInE e
+varsInE (Sig e1 e2) =
+  varsInE e1 ++ varsInE e2
+varsInE (MultiSig es1 es2) =
+  concat $ map varsInE es1 ++ map varsInE es2
+varsInE (Length e) =
+  varsInE e
+varsInE e@(Var _) =
+  [e]
+varsInE (Op e1 _ e2) =
+  varsInE e1 ++ varsInE e2
+varsInE _ = []
+
 genNTy :: BranchBuilder Ty
 genNTy = do
   st <- get

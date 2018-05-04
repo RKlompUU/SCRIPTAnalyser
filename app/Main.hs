@@ -21,7 +21,8 @@ main :: IO ()
 main = do
   args <- getArgs
   -- Modes
-  --    0: redeemable/prolog/nonredeemable
+  --    0: i/prolog/nonredeemable,
+  --        where i = the lowest number of variables that need to match sig or hash
   --    1: verbose
   let m = fromMaybe "0" (args !? 0)
 
@@ -34,6 +35,9 @@ main = do
       successBuilds = mapMaybe (either (const Nothing) Just) buildStates
       pls = map (either id id)
           $ map branchToProlog successBuilds
+      i = minimum
+        $ map length
+        $ map knowledgeCnstrsWithVar successBuilds
   case m of
     "1" -> do -- Verbose section
           putStrLn (show $ bs')
@@ -55,7 +59,7 @@ main = do
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
   when (null successBuilds) $ putStrLn "nonredeemable" >> exitFailure
   if (all null pls)
-    then putStrLn "redeemable" >> exitSuccess
+    then putStrLn (show i) >> exitSuccess
     else putStrLn "prolog" >> exitSuccess
 
 

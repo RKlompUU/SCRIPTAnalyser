@@ -4,7 +4,7 @@ import System.IO
 import System.Environment
 import Script.Parser
 import Data.Bitcoin.Script
-import qualified Data.ByteString.Lazy as B
+import qualified Data.ByteString.Lazy.Char8 as B
 
 import Data.List
 import Data.Maybe
@@ -15,8 +15,7 @@ import Constraints.ToProlog
 
 main :: IO ()
 main = do
-  file <- head <$> getArgs
-  bs <- B.readFile file
+  bs <- B.pack <$> getLine
   let bs' = bs
   let script = decode bs'
   putStrLn (show $ bs')

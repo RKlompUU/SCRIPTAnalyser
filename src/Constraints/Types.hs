@@ -197,23 +197,24 @@ knowledgeCnstrsWithVar b =
 
 varsInC :: ValConstraint -> [Expr]
 varsInC (C_IsTrue e) =
-  varsInE e
+  varsInE False False e
 varsInC (C_Not c) = varsInC c
 
-varsInE :: Expr -> [Expr]
-varsInE (Hash e) =
-  varsInE e
-varsInE (Sig e1 e2) =
-  varsInE e1 ++ varsInE e2
-varsInE (MultiSig es1 es2) =
-  concat $ map varsInE es1 ++ map varsInE es2
-varsInE (Length e) =
-  varsInE e
-varsInE e@(Var _) =
-  [e]
-varsInE (Op e1 _ e2) =
-  varsInE e1 ++ varsInE e2
-varsInE _ = []
+varsInE :: Bool -> Bool -> Expr -> [Expr]
+varsInE inOp knowledgeReq (Hash e) =
+  let b' = inOp || knowledgeReq
+  in varsInE b' b' e
+varsInE inOp _ (Sig e1 e2) =
+  varsInE inOp True e1 ++ varsInE inOp True e2
+varsInE inOp _ (MultiSig es1 es2) =
+  concat $ map (varsInE inOp True) es1 ++ map (varsInE inOp True) es2
+varsInE inOp knowledgeReq (Length e) =
+  varsInE inOp knowledgeReq e
+varsInE _ knowledgeReq (Op e1 _ e2) =
+  varsInE True knowledgeReq  e1 ++ varsInE True knowledgeReq e2
+varsInE inOp knowledgeReq e@(Var _)
+  | knowledgeReq = [e]
+varsInE _ _ _ = []
 
 genNTy :: BranchBuilder Ty
 genNTy = do

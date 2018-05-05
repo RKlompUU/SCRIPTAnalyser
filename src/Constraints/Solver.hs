@@ -11,8 +11,7 @@ import Data.Maybe
 import qualified Data.Map.Lazy as M
 
 import qualified Data.Range.Range as R
-import qualified Data.Range.Algebra as RA
-
+import qualified Data.Range.Algebra as R
 import qualified Debug.Trace as D
 
 data VConstraint =

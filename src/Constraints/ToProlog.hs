@@ -6,59 +6,89 @@ import Data.Maybe
 import Control.Monad.Except
 import Control.Monad.Trans.Reader
 import Control.Monad.Writer
+import Control.Monad
+import qualified Data.Map as M
+import qualified Data.Range.Range as R
 
 type PL = String
-type PrologWriter a = ReaderT BuildState (ExceptT String (Writer PL)) a
+type PrologWriter a = ReaderT (BuildState,Expr -> Ident) (ExceptT String (Writer PL)) a
 
-plFact :: PL -> PrologWriter PL
+askTy :: Expr -> PrologWriter AnnotTy
+askTy e = do
+  i <- (\f -> f e) <$> snd <$> ask
+  (\m -> (i, m M.! e)) <$> ty_cnstrs <$> fst <$> ask
+
+plFact :: PL -> PrologWriter ()
 plFact pl =
   if null pl
-    then return ""
-    else return $ pl ++ ".\n"
+    then return ()
+    else tell $ pl ++ ",\n"
 
 branchToProlog :: BuildState -> Either String PL
 branchToProlog b =
-  case runWriter (runExceptT (runReaderT bToProlog b)) of
+  let eIdents = \e -> M.findIndex e $ ty_cnstrs b
+  in case runWriter (runExceptT (runReaderT bToProlog (b,eIdents))) of
     (Left e,_)   -> Left e
     (Right _,pl) -> Right pl
 
 bToProlog :: PrologWriter ()
 bToProlog = do
-  css <- val_cnstrs <$> ask
-  pls <- mapM (\c -> cToProlog c >>= plFact) css
-  mapM_ tell pls
+  css <- val_cnstrs <$> fst <$> ask
+  mapM_ (\(i,c) -> addStmt i c) (zip [0..] css)
 
-cToProlog :: ValConstraint -> PrologWriter PL
+addStmt :: Int -> ValConstraint -> PrologWriter ()
+addStmt i c = do
+  tell $ "s" ++ show i ++ " :-\n"
+  cToProlog c
+  tell "true.\n"
+
+cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) = do
-  e2Prolog e
+  mapM_ (\e_ -> op2Prolog e_) (opsInE e)
 cToProlog (C_Not c) = do
-  pl <- cToProlog c
-  if null pl -- Can be null if c only contains expressions that are not verifiable (e.g. Sig x y)
-    then return ""
-    else return $ "#\\ " ++ pl
+  tell "#\\ "
+  cToProlog c
 cToProlog c =
   throwError $ "cToProlog not implemented for: " ++ show c
 
-e2Prolog :: Expr -> PrologWriter PL
-e2Prolog ETrue =
+
+opsInE :: Expr -> [Expr]
+opsInE e@(Op _ _ _) = [e]
+opsInE (Sig e1 e2) = opsInE e1 ++ opsInE e2
+opsInE (MultiSig es1 es2) = concat $ map opsInE es1 ++ map opsInE es2
+opsInE (Hash e) = opsInE e
+opsInE (Length e) = opsInE e
+opsInE _ = []
+
+
+op2Prolog :: Expr -> PrologWriter ()
+op2Prolog (Op e1 "==" e2) = do
+  t1 <- askTy e1
+  t2 <- askTy e2
+  relateTys t1 "==" t2
+op2Prolog _ = return ()
+
+
+boolE2Prolog :: Expr -> PrologWriter PL
+boolE2Prolog ETrue =
   return "1"
-e2Prolog EFalse =
+boolE2Prolog EFalse =
   return "0"
-e2Prolog (ConstInt i) =
+boolE2Prolog (ConstInt i) =
   return $ show i
-e2Prolog (Op e1 op e2)
+boolE2Prolog (Op e1 op e2)
   | isJust boolFDOp = do
-    p1 <- e2Prolog e1
-    let pOp = fromJust boolFDOp
-    p2 <- e2Prolog e2
-    return $ p1 ++ pOp ++ p2
+      p1 <- boolE2Prolog e1
+      let pOp = fromJust boolFDOp
+      p2 <- boolE2Prolog e2
+      return $ p1 ++ pOp ++ p2
   where boolFDOp = lookup op boolFDOps
-e2Prolog (Var n) =
+boolE2Prolog (Var n) =
   return $ "X" ++ show n
-e2Prolog (Sig _ _) = return ""
-e2Prolog (Hash _) = return ""
-e2Prolog (MultiSig _ _) = return ""
-e2Prolog e =
+boolE2Prolog (Sig _ _) = return ""
+boolE2Prolog (Hash _) = return ""
+boolE2Prolog (MultiSig _ _) = return ""
+boolE2Prolog e =
   throwError $ "e2Prolog not implemented for: " ++ show e
 
 boolFDOps :: [(OpIdent,String)]
@@ -66,6 +96,32 @@ boolFDOps =
   [("\\/", " #\\/ "),
    ("/\\", " #/\\ ")]
 
+relateTys :: AnnotTy -> OpIdent -> AnnotTy -> PrologWriter ()
+relateTys t1 "==" t2 = do
+  stateTy t1
+  stateTy t2
+
+  plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2
+
+tyBSPL :: AnnotTy -> PL
+tyBSPL (i,_) = "T" ++ show i ++ "bs"
+tyIPL :: AnnotTy -> PL
+tyIPL (i,_) = "T" ++ show i ++ "ints"
+
+stateTy :: AnnotTy -> PrologWriter ()
+stateTy t@(i,ty) = do
+  let bsFact = tyBSPL t ++ " in " ++ (intercalate " \\/ " $ map range2PL (bsRanges ty))
+  plFact bsFact
+
+  when (not $ null $ intRanges ty) $ do
+    let intFact = "T" ++ show i ++ "ints in " ++ (intercalate " \\/ " $ map range2PL (intRanges ty))
+    plFact intFact
+
+range2PL :: R.Range Int -> PL
+range2PL (R.SingletonRange i) =
+  show i
+range2PL (R.SpanRange i1 i2) =
+  show i1 ++ ".." ++ show i2
 {-
 toProlog :: BConstraints -> String
 toProlog c =

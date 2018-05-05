@@ -53,6 +53,8 @@ data Ty =
   | NTy Ident -- Named type (instantiable in forall. closure)
   deriving (Show)
 
+type AnnotTy = (Ident,Ty)
+
 int :: Ty
 int =
   Ty { intRanges = [R.SpanRange (-maxN) maxN],

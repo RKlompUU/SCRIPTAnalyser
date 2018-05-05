@@ -1,7 +1,13 @@
-isT(X0) :-
-  X0 #\= 0.
-isF(X0) :-
-  X0 #= 0.
+:- use_module(library(clpfd)).
 
-r(X0,X1) :-
-  isT(X0), 1 \= 0,\+ (5 > 5 - 2 * 0),X0 #>= 5,isT(X1);false.
+s1 :-
+T1bs in 32,
+T0bs in 32,
+T1bs #= T0bs,
+true.
+
+test(X2) :-
+  X in 0..10 \/ 51..15000000,
+  true.
+
+isT(X) :- X.

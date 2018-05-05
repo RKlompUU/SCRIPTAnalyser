@@ -33,6 +33,7 @@ branchToProlog b =
 
 bToProlog :: PrologWriter ()
 bToProlog = do
+  tell $ ":- use_module(library(clpfd)).\n\n"
   css <- val_cnstrs <$> fst <$> ask
   mapM_ (\(i,c) -> addStmt i c) (zip [0..] css)
 

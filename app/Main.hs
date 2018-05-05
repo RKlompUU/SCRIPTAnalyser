@@ -2,6 +2,7 @@ module Main where
 
 import System.IO
 import System.Exit
+import System.Process
 import System.Environment
 import Script.Parser
 import Data.Bitcoin.Script
@@ -66,11 +67,18 @@ prologVerify bs =
   case branchToProlog bs of
     Left e -> return $ Left e
     Right pl -> do
-      let r = pl ++ "-----P-R-O-L-O-G-----\n"
       let fn = "/tmp/BitcoinAnalysis-script.pl"
       writeFile fn pl
-      return $ Left r
+      results <- mapM (verifyC fn) (zip [0..] (val_cnstrs bs))
+      let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ concat (map fst results)
+      if all snd results
+        then return $ Right (r,bs)
+        else return $ Left r
 
+verifyC :: String -> (Int,ValConstraint) -> IO (String,Bool)
+verifyC fn (i,_) = do
+  (c,r,e) <- readProcessWithExitCode "/usr/bin/swipl" [fn] ("s" ++ show i ++ ".")
+  return $ ("***\n" ++ r ++ e ++ "***\n",isInfixOf "true." r)
 
 (!?) :: [a] -> Int -> Maybe a
 [] !? _ = Nothing

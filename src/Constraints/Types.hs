@@ -30,7 +30,7 @@ data Expr where
   --Min :: Expr -> Expr -> Expr
   --Max :: Expr -> Expr -> Expr
 
-  Hash :: Expr -> Expr
+  Hash :: Expr -> Int -> Expr
   Sig  :: Expr -> Expr -> Expr
   MultiSig :: [Expr] -> [Expr] -> Expr
 
@@ -41,7 +41,6 @@ data Expr where
 maxN = 0x7fffffff -- 32 bit signed int
 maxBSL = 520 -- bytes
 maxIntBSL = 4
-hashOutBL = 32
 sigBL = 71
 pubBL = 65
 
@@ -67,10 +66,6 @@ top :: Ty
 top =
  Ty { intRanges = [R.SpanRange (-maxN) maxN],
       bsRanges  = [R.SpanRange 0 maxBSL] }
-hashOutTy :: Ty
-hashOutTy =
-  Ty { intRanges = [],
-       bsRanges  = [R.SingletonRange hashOutBL] }
 skTy :: Ty -- Secret key type
 skTy =
   top { bsRanges = [R.SpanRange 0 100] }
@@ -104,8 +99,8 @@ annotTy e@(ConstBS bs)
              bsRanges = [R.SingletonRange (BS.length bs)] } )
 annotTy e@(ConstInt i) =
   (e, int { intRanges = [R.SingletonRange i] })
-annotTy e@(Hash _) =
-  (e, hashOutTy)
+annotTy e@(Hash _ l) =
+  (e, Ty { intRanges = [], bsRanges = [R.SingletonRange l] } )
 annotTy e@(Length _) =
   (e, top)
 annotTy ETrue =
@@ -203,7 +198,7 @@ varsInC (C_IsTrue e) =
 varsInC (C_Not c) = varsInC c
 
 varsInE :: Bool -> Bool -> Expr -> [Expr]
-varsInE inOp knowledgeReq (Hash e) =
+varsInE inOp knowledgeReq (Hash e _) =
   let b' = inOp || knowledgeReq
   in varsInE b' b' e
 varsInE inOp _ (Sig e1 e2) =

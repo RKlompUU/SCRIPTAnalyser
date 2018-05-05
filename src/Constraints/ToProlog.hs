@@ -57,7 +57,7 @@ opsInE :: Expr -> [Expr]
 opsInE e@(Op _ _ _) = [e]
 opsInE (Sig e1 e2) = opsInE e1 ++ opsInE e2
 opsInE (MultiSig es1 es2) = concat $ map opsInE es1 ++ map opsInE es2
-opsInE (Hash e) = opsInE e
+opsInE (Hash e _) = opsInE e
 opsInE (Length e) = opsInE e
 opsInE _ = []
 
@@ -87,7 +87,7 @@ boolE2Prolog (Op e1 op e2)
 boolE2Prolog (Var n) =
   return $ "X" ++ show n
 boolE2Prolog (Sig _ _) = return ""
-boolE2Prolog (Hash _) = return ""
+boolE2Prolog (Hash _ _) = return ""
 boolE2Prolog (MultiSig _ _) = return ""
 boolE2Prolog e =
   throwError $ "e2Prolog not implemented for: " ++ show e

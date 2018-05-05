@@ -372,7 +372,8 @@ stModOp OP_WITHIN = do
 -}
 
 
-stModOp op | any (== op) hashOps = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v))
+stModOp OP_HASH160 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 20))
+stModOp OP_HASH256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
 
 stModOp OP_EQUAL = do
   v_2 <- popStack
@@ -399,15 +400,6 @@ stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"
 stModOp op =
   error $ "Error, no stModOp implementation for operator: " ++ show op
 
-
-hashOps =
-  [
-  OP_RIPEMD160,
-  OP_SHA1,
-  OP_SHA256,
-  OP_HASH160,
-  OP_HASH256
-  ]
 
 disabledOps =
   [

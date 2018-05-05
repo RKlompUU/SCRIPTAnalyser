@@ -33,11 +33,12 @@ main = do
   let ast = buildAST (scriptOps script)
       buildStates = genBuildStates ast
       successBuilds = mapMaybe (either (const Nothing) Just) buildStates
-      pls = map (either id id)
-          $ map branchToProlog successBuilds
+  logicBuilds <- mapM prologVerify successBuilds
+  let logicBuildsInfo = map (either id fst) logicBuilds
+      logicOKBuilds = mapMaybe (either (const Nothing) Just) logicBuilds
       i = minimum
         $ map length
-        $ map knowledgeCnstrsWithVar successBuilds
+        $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
   case m of
     "1" -> do -- Verbose section
           putStrLn (show $ bs')
@@ -52,15 +53,23 @@ main = do
           putStrLn $ "-------------------------"
 
           putStrLn $ "-------------------------"
-          putStrLn $ dumpList pls
+          putStrLn $ dumpList logicBuildsInfo
           putStrLn $ "-------------------------"
           putStrLn $ "------V-E-R-D-I-C-T------"
     otherwise -> return ()
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
-  when (null successBuilds) $ putStrLn "nonredeemable" >> exitFailure
-  if (all null pls)
-    then putStrLn (show i) >> exitSuccess
-    else putStrLn "prolog" >> exitSuccess
+  when (null logicOKBuilds) $ putStrLn "nonredeemable" >> exitFailure
+  putStrLn (show i) >> exitSuccess
+
+prologVerify :: BuildState -> IO (Either String (String,BuildState))
+prologVerify bs =
+  case branchToProlog bs of
+    Left e -> return $ Left e
+    Right pl -> do
+      let r = pl ++ "-----P-R-O-L-O-G-----\n"
+      let fn = "/tmp/BitcoinAnalysis-script.pl"
+      writeFile fn pl
+      return $ Left r
 
 
 (!?) :: [a] -> Int -> Maybe a

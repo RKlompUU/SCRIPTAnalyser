@@ -179,13 +179,15 @@ data BuildState =
   }
 initBuildState =
   BuildState {
-    ty_cnstrs  = M.empty,
+    ty_cnstrs  = initialTypes,
     val_cnstrs = [],
     stack      = [],
     freshV     = 0,
     nTy        = 0,
     muts       = []
   }
+
+initialTypes = M.fromList [(EFalse,false),(ETrue,true)]
 
 knowledgeCnstrsWithVar :: BuildState -> [[Expr]]
 knowledgeCnstrsWithVar b =

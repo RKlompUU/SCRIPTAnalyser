@@ -1,13 +1,10 @@
 :- use_module(library(clpfd)).
 
+
 s1 :-
-T1bs in 32,
-T0bs in 2,
-T1bs #= T0bs,
+T1bs in 0,
+T1ints in 0,
+T0bs in 0,
+T0ints in 0,
+T0bs #\= T1bs,
 true.
-
-test(X2) :-
-  X in 0..10 \/ 51..15000000,
-  true.
-
-isT(X) :- X.

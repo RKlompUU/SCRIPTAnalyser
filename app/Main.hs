@@ -76,9 +76,12 @@ prologVerify bs =
         else return $ Left r
 
 verifyC :: String -> (Int,ValConstraint) -> IO (String,Bool)
-verifyC fn (i,_) = do
+verifyC fn (i,c) = do
+  let expected = if cBool c
+                  then "true."
+                  else "false."
   (c,r,e) <- readProcessWithExitCode "/usr/bin/swipl" [fn] ("s" ++ show i ++ ".")
-  return $ ("***\n" ++ r ++ e ++ "***\n",isInfixOf "true." r)
+  return $ ("***\n" ++ "Expecting: " ++ expected ++ "\n" ++ r ++ e ++ "***\n",isInfixOf expected r)
 
 (!?) :: [a] -> Int -> Maybe a
 [] !? _ = Nothing

@@ -355,6 +355,15 @@ stModOp OP_LESSTHAN = opStack ">"
 stModOp OP_GREATERTHAN = opStack "<"
 stModOp OP_LESSTHANOREQUAL = opStack ">="
 stModOp OP_GREATERTHANOREQUAL = opStack "<="
+stModOp OP_WITHIN = do
+  v_3 <- popStack -- max    |
+  v_2 <- popStack -- min    | min <= x < max
+  v_1 <- popStack -- x      |
+  
+  (uncurry pushStack) (annotTy (Op v_2 "<=" v_1))
+  (uncurry pushStack) (annotTy (Op v_1 "<" v_3))
+  opStack "/\\"
+
 {-
 stModOp OP_MIN = do
   v_2 <- popStack
@@ -364,16 +373,12 @@ stModOp OP_MAX = do
   v_2 <- popStack
   v_1 <- popStack
   pushStack (Max v_1 v_2)
-stModOp OP_WITHIN = do
-  v_3 <- popStack -- max    |
-  v_2 <- popStack -- min    | min <= x < max
-  v_1 <- popStack -- x      |
-  pushStack (Op (Op v_2 "<=" v_1) "/\\" (Op v_1 "<" v_3))
 -}
 
 
 stModOp OP_HASH160 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 20))
 stModOp OP_HASH256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
+stModOp OP_SHA256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
 
 stModOp OP_EQUAL = do
   v_2 <- popStack

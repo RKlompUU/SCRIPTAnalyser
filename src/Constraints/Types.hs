@@ -52,7 +52,7 @@ data Ty =
   | NTy Ident -- Named type (instantiable in forall. closure)
   deriving (Show)
 
-type AnnotTy = (Ident,Ty)
+type AnnotTy = (Ident,(Bool -> Ty))
 
 int :: Ty
 int =
@@ -80,6 +80,11 @@ toInt t =
 toBool :: Ty -> Ty
 toBool = id -- Always castable. From any other type.
 
+flipTy :: Ty -> Ty
+flipTy t =
+  Ty { intRanges = R.difference (intRanges top) (intRanges t),
+       bsRanges = R.difference (bsRanges top) (bsRanges t) }
+
 false :: Ty
 false =
  Ty { intRanges = [R.SingletonRange 0],
@@ -102,13 +107,21 @@ annotTy e@(ConstInt i) =
 annotTy e@(Hash _ l) =
   (e, Ty { intRanges = [], bsRanges = [R.SingletonRange l] } )
 annotTy e@(Length _) =
-  (e, top)
+  (e, int { intRanges = [R.SpanRange 0 520] } )
 annotTy ETrue =
   (ETrue, true)
 annotTy EFalse =
   (EFalse, false)
+annotTy e@(Op _ op _)
+  | any (==op) (cmpOps ++ boolOps) =
+    (e, bool)
 annotTy e =
   error $ "annotTy not implemented (yet) for " ++ show e
+
+cmpOps =
+  ["==","/=","<=","<"]
+boolOps =
+  ["/\\","\\/"]
 
 opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
 opTys "<"   = return $ (toInt,toInt,bool)
@@ -188,6 +201,11 @@ initBuildState =
   }
 
 initialTypes = M.fromList [(EFalse,false),(ETrue,true)]
+
+
+knowledgeBased :: Expr -> Bool
+knowledgeBased e =
+  not $ null (varsInE False False e)
 
 knowledgeCnstrsWithVar :: BuildState -> [[Expr]]
 knowledgeCnstrsWithVar b =

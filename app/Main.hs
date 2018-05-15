@@ -15,6 +15,14 @@ import Constraints.Gen
 import Constraints.Types
 import Constraints.ToProlog
 import Control.Monad
+import qualified Control.Exception as E
+
+
+replaceX :: Eq a => (a,a) -> [a] -> [a]
+replaceX _ [] = []
+replaceX (f,t) (x:xs)
+  | f == x = t : replaceX (f,t) xs
+  | True   = x : replaceX (f,t) xs
 
 -- If nonredeemable, exit code = failure
 -- If redeemable or requires prolog to determine this (which is not yet implemented), exit code = success
@@ -31,15 +39,18 @@ main = do
   let bs' = bs
   let script = decode bs'
 
-  let ast = buildAST (scriptOps script)
-      buildStates = genBuildStates ast
+  ast <- E.catch (E.evaluate $ buildAST (scriptOps script))
+                 (\e -> putStrLn ("parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall))) >> exitFailure)
+  let buildStates = genBuildStates ast
       successBuilds = mapMaybe (either (const Nothing) Just) buildStates
+  {-
   logicBuilds <- mapM prologVerify successBuilds
   let logicBuildsInfo = map (either id fst) logicBuilds
       logicOKBuilds = mapMaybe (either (const Nothing) Just) logicBuilds
       i = minimum
         $ map length
         $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
+  -}
   case m of
     "1" -> do -- Verbose section
           putStrLn (show $ bs')
@@ -52,15 +63,17 @@ main = do
           putStrLn $ "-------------------------"
           putStrLn $ dumpBuildStates buildStates
           putStrLn $ "-------------------------"
-
+{-
           putStrLn $ "-------------------------"
           putStrLn $ dumpList logicBuildsInfo
           putStrLn $ "-------------------------"
+-}
           putStrLn $ "------V-E-R-D-I-C-T------"
     otherwise -> return ()
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
-  when (null logicOKBuilds) $ putStrLn "nonredeemable" >> exitFailure
-  putStrLn (show i) >> exitSuccess
+  --when (null logicOKBuilds) $ putStrLn "nonredeemable" >> exitFailure
+  when (null successBuilds) $ putStrLn "type errors" >> exitFailure
+  putStrLn "types correct" >> exitSuccess
 
 prologVerify :: BuildState -> IO (Either String (String,BuildState))
 prologVerify bs =

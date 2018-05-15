@@ -262,9 +262,9 @@ tySubst t1 t2 = do
 
 tyOK :: Ty -> Bool
 tyOK t =
-  (not . null) (bsRanges t) &&
-  ((not . null) (intRanges t) ||
-   (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges t)))
+  (not . null) (bsRanges t) -- &&
+--  ((not . null) (intRanges t) ||
+--   (not . null) (R.intersection [R.SpanRange 5 maxBSL] (bsRanges t)))
 
 
 data BranchMutation =

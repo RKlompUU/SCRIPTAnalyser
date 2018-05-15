@@ -359,7 +359,7 @@ stModOp OP_WITHIN = do
   v_3 <- popStack -- max    |
   v_2 <- popStack -- min    | min <= x < max
   v_1 <- popStack -- x      |
-  
+
   (uncurry pushStack) (annotTy (Op v_2 "<=" v_1))
   (uncurry pushStack) (annotTy (Op v_1 "<" v_3))
   opStack "/\\"
@@ -383,6 +383,13 @@ stModOp OP_SHA256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
 stModOp OP_EQUAL = do
   v_2 <- popStack
   v_1 <- popStack
+
+  t_1 <- tyGet v_1
+  t_2 <- tyGet v_2
+  t' <- tySubst t_1 t_2
+  tySet v_1 t'
+  tySet v_2 t'
+
   pushStack (Op v_1 "==" v_2) bool
 stModOp OP_CHECKSIG = do
   v_2 <- popStack
@@ -403,7 +410,7 @@ stModOp OP_CHECKMULTISIG = do
 stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"
 
 stModOp op =
-  error $ "Error, no stModOp implementation for operator: " ++ show op
+  failBranch $ "Error, no stModOp implementation for operator: " ++ show op
 
 
 disabledOps =

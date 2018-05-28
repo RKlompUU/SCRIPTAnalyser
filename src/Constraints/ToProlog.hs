@@ -81,9 +81,10 @@ addStmt i c = do
   let es = esInC c
   mapM_ tellTy es
 
-  tell "("
-  local (\sk -> sk {factSep = " #/\\ "}) (cToProlog c)
-  tell "(#\\ 0)).\n"
+  --tell "("
+  local (\sk -> sk {factSep = ",\n"}) (cToProlog c)
+  tell "true.\n"
+  --tell "(#\\ 0)).\n"
 
 cBool :: ValConstraint -> Bool
 cBool (C_IsTrue _) = True
@@ -125,15 +126,18 @@ esInE e = [e]
 e2Prolog :: Expr -> PrologWriter ()
 e2Prolog e@(Op e1 op e2)
   | any (==op) cmpOps = do
-      t1 <- askTy e1 True
+    t1 <- askTy e1 True
+    t2 <- askTy e2 True
+    relateTys t1 op t2 True True
+{-      t1 <- askTy e1 True
       t1' <- askTy e1 False
       t2 <- askTy e2 True
       t2' <- askTy e2 False
-      withSep " #\\/ " "0" $ do
+       withSep " #\\// " "0" $ do
         relateTys t1 op t2 True True
         relateTys t1' op t2 False True
         relateTys t1 op t2' True False
-        relateTys t1' op t2' True True
+        relateTys t1' op t2' True True -}
 e2Prolog (Op e1 "/\\" e2) = do
   e2Prolog e1
   e2Prolog e2

@@ -43,14 +43,14 @@ main = do
                  (\e -> putStrLn ("parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall))) >> exitFailure)
   let buildStates = genBuildStates ast
       successBuilds = mapMaybe (either (const Nothing) Just) buildStates
-  {-
+
   logicBuilds <- mapM prologVerify successBuilds
   let logicBuildsInfo = map (either id fst) logicBuilds
       logicOKBuilds = mapMaybe (either (const Nothing) Just) logicBuilds
       i = minimum
         $ map length
         $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
-  -}
+
   case m of
     "1" -> do -- Verbose section
           putStrLn (show $ bs')
@@ -63,16 +63,16 @@ main = do
           putStrLn $ "-------------------------"
           putStrLn $ dumpBuildStates buildStates
           putStrLn $ "-------------------------"
-{-
+
           putStrLn $ "-------------------------"
           putStrLn $ dumpList logicBuildsInfo
           putStrLn $ "-------------------------"
--}
+
           putStrLn $ "------V-E-R-D-I-C-T------"
     otherwise -> return ()
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
-  --when (null logicOKBuilds) $ putStrLn "nonredeemable" >> exitFailure
   when (null successBuilds) $ putStrLn "type errors" >> exitFailure
+  when (null logicOKBuilds) $ putStrLn "nonredeemable" >> exitFailure
   putStrLn "types correct" >> exitSuccess
 
 prologVerify :: BuildState -> IO (Either String (String,BuildState))

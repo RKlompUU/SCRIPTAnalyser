@@ -113,10 +113,13 @@ opStack :: OpIdent -> BranchBuilder ()
 opStack op = do
   v_2 <- popStack
   v_1 <- popStack
+
   (t_1,t_2,t_r) <- opTys op
   tyCast v_1 t_1
   tyCast v_2 t_2
-  pushStack (Op v_2 op v_1) t_r
+
+  let e = Op v_2 op v_1
+  pushStack e t_r
 
 
 --
@@ -383,13 +386,6 @@ stModOp OP_SHA256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
 stModOp OP_EQUAL = do
   v_2 <- popStack
   v_1 <- popStack
-
-  t_1 <- tyGet v_1
-  t_2 <- tyGet v_2
-  t' <- tySubst t_1 t_2
-  tySet v_1 t'
-  tySet v_2 t'
-
   pushStack (Op v_1 "==" v_2) bool
 stModOp OP_CHECKSIG = do
   v_2 <- popStack

@@ -36,16 +36,12 @@ withSep sep endStr writer = do
   tell $ endStr ++ ")" ++ oldSep
   return r
 
-askTy :: Expr -> Bool -> PrologWriter (Ident,Ty)
-askTy e correctK = do
+askTy :: Expr -> PrologWriter (Ident,Ty)
+askTy e = do
   i <- (\f -> f e) <$> eMapping <$> ask
   tys <- ty_cnstrs <$> buildState <$> ask
   if M.member e tys
-    then if correctK
-          then return $ (i,tys M.! e)
-          else if knowledgeBased e
-                then return $ (i, flipTy $ tys M.! e)
-                else return $ (i,tys M.! e)
+    then return $ (i,tys M.! e)
     else throwError $ "Type unknown of expr: " ++ show e
 
 plFact :: PL -> PrologWriter ()
@@ -71,8 +67,7 @@ bToProlog = do
 
 tellTy :: Expr -> PrologWriter ()
 tellTy e =
-  askTy e True >>= stateTy True >>
-  askTy e False >>= stateTy False
+  askTy e >>= stateTy
 
 addStmt :: Int -> ValConstraint -> PrologWriter ()
 addStmt i c = do
@@ -81,10 +76,10 @@ addStmt i c = do
   let es = esInC c
   mapM_ tellTy es
 
-  --tell "("
-  local (\sk -> sk {factSep = ",\n"}) (cToProlog c)
-  tell "true.\n"
-  --tell "(#\\ 0)).\n"
+  tell "("
+  local (\sk -> sk {factSep = " #/\\\n"}) (cToProlog c)
+  --tell "true.\n"
+  tell "(#\\ 0)).\n"
 
 cBool :: ValConstraint -> Bool
 cBool (C_IsTrue _) = True
@@ -95,8 +90,9 @@ cToProlog (C_IsTrue e) = do
 --  mapM_ (\e_ -> op2Prolog e_) (opsInE e)
   e2Prolog e
 cToProlog (C_Not c) = do
+  --tell "#\\ ("
   cToProlog c
-  --tell "#\\ "
+  --tell "#\\ 0) #/\\ "
 cToProlog c =
   throwError $ "cToProlog not implemented for: " ++ show c
 
@@ -126,18 +122,7 @@ esInE e = [e]
 e2Prolog :: Expr -> PrologWriter ()
 e2Prolog e@(Op e1 op e2)
   | any (==op) cmpOps = do
-    t1 <- askTy e1 True
-    t2 <- askTy e2 True
-    relateTys t1 op t2 True True
-{-      t1 <- askTy e1 True
-      t1' <- askTy e1 False
-      t2 <- askTy e2 True
-      t2' <- askTy e2 False
-       withSep " #\\// " "0" $ do
-        relateTys t1 op t2 True True
-        relateTys t1' op t2 False True
-        relateTys t1 op t2' True False
-        relateTys t1' op t2' True True -}
+    relateTys e1 op e2
 e2Prolog (Op e1 "/\\" e2) = do
   e2Prolog e1
   e2Prolog e2
@@ -145,8 +130,8 @@ e2Prolog (Op e1 "\\/" e2) = do
   withSep " #\\/ " "0" $ do
     e2Prolog e1
     e2Prolog e2
-e2Prolog (Sig _ _) = return ()
-e2Prolog (MultiSig _ _) = return ()
+e2Prolog (Sig _ _) = plFact "1 #\\/ 0"
+e2Prolog (MultiSig _ _) = plFact "1"
 e2Prolog (Hash _ _) = return ()
 e2Prolog e =
   throwError $ "e2Prolog not (yet) implemented for " ++ show e
@@ -156,28 +141,36 @@ boolFDOps =
   [("\\/", " #\\/ "),
    ("/\\", " #/\\ ")]
 
-relateTys :: (Ident,Ty) -> OpIdent -> (Ident,Ty) -> Bool -> Bool -> PrologWriter ()
-relateTys t1 "==" t2 b1 b2 = do
-  plFact $ tyBSPL t1 b1 ++ " #= " ++ tyBSPL t2 b2
-relateTys t1 "/=" t2 b1 b2 = do
-  plFact $ tyBSPL t1 b1 ++ " #\\= " ++ tyBSPL t2 b2
-relateTys t1 "<=" t2 b1 b2= do
-  plFact $ tyIPL t1 b1 ++ " #=< " ++ tyIPL t2 b2
-relateTys t1 "<" t2 b1 b2 = do
-  plFact $ tyIPL t1 b1 ++ " #< " ++ tyIPL t2 b2
+relateTys :: Expr -> OpIdent -> Expr -> PrologWriter ()
+relateTys e1 op e2 = do
+  t1 <- askTy e1
+  t2 <- askTy e2
+  relateTys' t1 op t2
 
-tyBSPL :: (Ident,Ty) -> Bool -> PL
-tyBSPL (i,_) b = "T" ++ show i ++ "bs" ++ show b
-tyIPL :: (Ident,Ty) -> Bool -> PL
-tyIPL (i,_) b = "T" ++ show i ++ "ints" ++ show b
+relateTys' :: (Ident,Ty) -> OpIdent -> (Ident,Ty) -> PrologWriter ()
+relateTys' t1 "==" t2 = do
+  plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2
+  when ((not $ null $ intRanges $ snd t1) && (not $ null $ intRanges $ snd t2)) $ do
+    plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2
+relateTys' t1 "/=" t2 = do
+  plFact $ tyBSPL t1 ++ " #\\= " ++ tyBSPL t2
+relateTys' t1 "<=" t2= do
+  plFact $ tyIPL t1 ++ " #=< " ++ tyIPL t2
+relateTys' t1 "<" t2 = do
+  plFact $ tyIPL t1 ++ " #< " ++ tyIPL t2
 
-stateTy :: Bool -> (Ident,Ty) -> PrologWriter ()
-stateTy b t@(i,ty) = do
-  let bsFact = tyBSPL t b ++ " in " ++ (intercalate " \\/ " $ map range2PL (bsRanges ty))
+tyBSPL :: (Ident,Ty) -> PL
+tyBSPL (i,_) = "T" ++ show i ++ "bs"
+tyIPL :: (Ident,Ty) -> PL
+tyIPL (i,_) = "T" ++ show i ++ "ints"
+
+stateTy ::  (Ident,Ty) -> PrologWriter ()
+stateTy t@(i,ty) = do
+  let bsFact = tyBSPL t ++ " in " ++ (intercalate " \\/ " $ map range2PL (bsRanges ty))
   plFact bsFact
 
   when (not $ null $ intRanges ty) $ do
-    let intFact = tyIPL t b ++ " in " ++ (intercalate " \\/ " $ map range2PL (intRanges ty))
+    let intFact = tyIPL t ++ " in " ++ (intercalate " \\/ " $ map range2PL (intRanges ty))
     plFact intFact
 
 range2PL :: R.Range Int -> PL

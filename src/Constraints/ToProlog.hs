@@ -71,15 +71,18 @@ tellTy e =
 
 addStmt :: Int -> ValConstraint -> PrologWriter ()
 addStmt i c = do
-  tell $ "s" ++ show i ++ " :-\n"
+  tell $ "s" ++ show i ++ "(V) :-\n"
 
   let es = esInC c
   mapM_ tellTy es
 
+  cToProlog c
+{-
   tell "("
   local (\sk -> sk {factSep = " #/\\\n"}) (cToProlog c)
   --tell "true.\n"
   tell "(#\\ 0)).\n"
+-}
 
 cBool :: ValConstraint -> Bool
 cBool (C_IsTrue _) = True
@@ -87,12 +90,12 @@ cBool (C_Not c) = not $ cBool c
 
 cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) = do
---  mapM_ (\e_ -> op2Prolog e_) (opsInE e)
+  if knowledgeBased e
+    then plFact "V in 0..1"
+    else plFact "V in 1"
   e2Prolog e
 cToProlog (C_Not c) = do
-  --tell "#\\ ("
   cToProlog c
-  --tell "#\\ 0) #/\\ "
 cToProlog c =
   throwError $ "cToProlog not implemented for: " ++ show c
 

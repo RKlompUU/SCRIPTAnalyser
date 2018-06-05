@@ -1,10 +1,11 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs,DeriveDataTypeable #-}
 module Constraints.Types where
 
 import Control.Monad.State.Lazy
 import Control.Monad.Except
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe
 import qualified Data.Map.Lazy as M
@@ -13,22 +14,21 @@ import qualified Data.Range.Range as R
 import qualified Debug.Trace as D
 import Bitcoin.Script.Integer
 
+import KlompStandard
+import qualified Data.Typeable as T
+import qualified Data.Data as TD
+
 type Ident = Int
 type OpIdent = String
 data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
+
   EFalse   :: Expr
   ETrue    :: Expr
+  Not :: Expr -> Expr
 
   Length :: Expr -> Expr
-  --Abs :: Expr -> Expr
-  -- Not: \v -> if v == 0
-  --              then Not(v) = 1
-  --              else Not(v) = 0
-  --Not :: Expr -> Expr
-  --Min :: Expr -> Expr -> Expr
-  --Max :: Expr -> Expr -> Expr
 
   Hash :: Expr -> Int -> Expr
   Sig  :: Expr -> Expr -> Expr
@@ -36,13 +36,60 @@ data Expr where
 
   Var   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
-  deriving (Show,Eq,Ord)
+  deriving (Show,Eq,Ord,T.Typeable,TD.Data)
 
 maxN = 0x7fffffff -- 32 bit signed int
 maxBSL = 520 -- bytes
 maxIntBSL = 4
 sigBL = 71
 pubBL = 65
+
+atomEs :: [TD.Constr]
+atomEs =
+  [TD.toConstr EFalse,
+   TD.toConstr ETrue,
+   TD.toConstr $ ConstInt undefined,
+   TD.toConstr $ ConstBS undefined
+   ]
+
+atom2Bool :: Expr -> Bool
+atom2Bool ETrue =
+  True
+atom2Bool EFalse =
+  False
+atom2Bool (ConstInt i) =
+  i /= 0
+atom2Bool (ConstBS bs) =
+  case convert2Int (ConstBS bs) of
+    Just (ConstInt 0) -> False
+    _      -> True
+
+
+lazy2StrictBS :: BSL.ByteString -> BS.ByteString
+lazy2StrictBS =
+  BS.concat . BSL.toChunks
+
+convert2Int :: Expr -> Maybe Expr
+convert2Int (ConstInt i) = Just $ ConstInt i
+convert2Int (ConstBS bs)
+  | BS.length bs <= 4 = ConstInt <$> return (fromIntegral $ asInteger bs)
+convert2Int _ = Nothing
+
+tryConvert2Int :: Expr -> Expr
+tryConvert2Int e
+  | isJust e' = fromJust e'
+  | otherwise = e
+  where e' = convert2Int e
+
+e2i :: Expr -> Int
+e2i (ConstInt i) = i
+e2i e | isJust e' = e2i (fromJust e')
+  where e' = convert2Int e
+e2i e = error $ "Error: e2i for expr not implemented: " ++ show e
+
+e2l :: Expr -> Int
+e2l (ConstBS bs) = BS.length bs
+e2l e = error $ "Error: e2l for expr not implemented: " ++ show e
 
 data Ty =
     Ty {
@@ -159,7 +206,6 @@ tyGet e = do
 
 data ValConstraint where
   C_IsTrue :: Expr -> ValConstraint
-  C_Not    :: ValConstraint -> ValConstraint
   deriving (Show,Eq)
 
 addCnstr :: ValConstraint -> BranchBuilder ()
@@ -215,7 +261,6 @@ knowledgeCnstrsWithVar b =
 varsInC :: ValConstraint -> [Expr]
 varsInC (C_IsTrue e) =
   varsInE False False e
-varsInC (C_Not c) = varsInC c
 
 varsInE :: Bool -> Bool -> Expr -> [Expr]
 varsInE inOp knowledgeReq (Hash e _) =

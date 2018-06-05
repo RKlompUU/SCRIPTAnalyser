@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs #-}
 module Constraints.Gen where
 
+import KlompStandard
+
 import Control.Monad.Trans.Reader
 import Control.Monad.State.Lazy
 import Control.Applicative
@@ -29,33 +31,6 @@ finalizeBranch = do
   e <- popStack
   tySet e true
   addCnstr (C_IsTrue e)
-
-lazy2StrictBS :: BSL.ByteString -> BS.ByteString
-lazy2StrictBS =
-  BS.concat . BSL.toChunks
-
-convert2Int :: Expr -> Maybe Expr
-convert2Int (ConstInt i) = Just $ ConstInt i
-convert2Int (ConstBS bs)
-  | BS.length bs <= 4 = ConstInt <$> return (fromIntegral $ asInteger bs)
-convert2Int _ = Nothing
-
-tryConvert2Int :: Expr -> Expr
-tryConvert2Int e
-  | isJust e' = fromJust e'
-  | otherwise = e
-  where e' = convert2Int e
-
-e2i :: Expr -> Int
-e2i (ConstInt i) = i
-e2i e | isJust e' = e2i (fromJust e')
-  where e' = convert2Int e
-e2i e = error $ "Error: e2i for expr not implemented: " ++ show e
-
-e2l :: Expr -> Int
-e2l (ConstBS bs) = BS.length bs
-e2l e = error $ "Error: e2l for expr not implemented: " ++ show e
-
 
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
 
@@ -169,8 +144,8 @@ genCnstrs (ScriptITE b0 b1 cont) = do
                       if b
                         then addCnstr (C_IsTrue v) >>
                              tySet v true
-                        else addCnstr (C_Not (C_IsTrue v)) >>
-                             tySet v false
+                        else addCnstr (C_IsTrue $ Not v) >>
+                             tySet (Not v) true
                  )
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1

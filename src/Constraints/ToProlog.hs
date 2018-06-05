@@ -12,6 +12,8 @@ import qualified Data.Range.Range as R
 import qualified Data.ByteString as BS
 import Bitcoin.Script.Integer
 
+import KlompStandard
+
 data ScriptKnowledge =
   ScriptKnowledge {
     buildState :: BuildState,
@@ -81,26 +83,13 @@ addStmt i c = do
   --tell "true.\n"
   tell "(#\\ 0)).\n"
 
-cBool :: ValConstraint -> Bool
-cBool (C_IsTrue _) = True
-cBool (C_Not c) = not $ cBool c
-
 cToProlog :: ValConstraint -> PrologWriter ()
-cToProlog (C_IsTrue e) = do
---  mapM_ (\e_ -> op2Prolog e_) (opsInE e)
+cToProlog (C_IsTrue e) =
   e2Prolog e
-cToProlog (C_Not c) = do
-  --tell "#\\ ("
-  cToProlog c
-  --tell "#\\ 0) #/\\ "
-cToProlog c =
-  throwError $ "cToProlog not implemented for: " ++ show c
 
 esInC :: ValConstraint -> [Expr]
 esInC (C_IsTrue e) =
   EFalse : esInE e
-esInC (C_Not c) =
-  esInC c
 
 opsInE :: Expr -> [Expr]
 opsInE e =
@@ -117,9 +106,19 @@ esInE e@(Sig e1 e2) = e : esInE e1 ++ esInE e2
 esInE e@(MultiSig es1 es2) = e : (concat $ map esInE es1 ++ map esInE es2)
 esInE e@(Hash e1 _) = e : esInE e1
 esInE e@(Length e1) = e : esInE e1
+esInE e@(Not e1) = e : esInE e1
 esInE e = [e]
 
+
+contradiction :: PrologWriter ()
+contradiction = plFact "false"
+
 e2Prolog :: Expr -> PrologWriter ()
+e2Prolog e
+  | any (ccEq e) atomEs =
+    if atom2Bool e
+      then return ()
+      else contradiction
 e2Prolog e@(Op e1 op e2)
   | any (==op) cmpOps = do
     relateTys e1 op e2
@@ -130,12 +129,39 @@ e2Prolog (Op e1 "\\/" e2) = do
   withSep " #\\/ " "0" $ do
     e2Prolog e1
     e2Prolog e2
-e2Prolog (Sig _ _) = plFact "1 #\\/ 0"
-e2Prolog (MultiSig _ _) = plFact "1"
-e2Prolog (Hash _ _) = return ()
+e2Prolog (Sig _ _) =
+  return () -- plFact "1 #\\/ 0"
+e2Prolog (MultiSig _ _) =
+  return () -- plFact "1"
+e2Prolog (Hash _ _) =
+  return ()
+
+e2Prolog (Not (Not e)) =
+  e2Prolog e
+e2Prolog (Not e)
+  | any (ccEq e) atomEs =
+    if not $ atom2Bool e
+      then return ()
+      else contradiction
+e2Prolog (Not (Op e1 op e2))
+  | isJust flippedOp =
+    relateTys e1 (fromJust flippedOp) e2
+  where flippedOp = lookup op flipOps
+e2Prolog (Not (Op e1 "/\\" e2)) =
+  e2Prolog (Op (Not e1) "\\/" (Not e2))
+e2Prolog (Op e1 "\\/" e2) =
+  e2Prolog (Op (Not e1) "/\\" (Not e2))
 e2Prolog e =
   throwError $ "e2Prolog not (yet) implemented for " ++ show e
 
+flipOps :: [(OpIdent,OpIdent)]
+flipOps =
+  [("<", ">="),
+   (">=", "<"),
+   (">", "<="),
+   ("<=", ">"),
+   ("==", "/="),
+   ("/=", "==")]
 boolFDOps :: [(OpIdent,String)]
 boolFDOps =
   [("\\/", " #\\/ "),
@@ -147,17 +173,28 @@ relateTys e1 op e2 = do
   t2 <- askTy e2
   relateTys' t1 op t2
 
+hasInts :: Ty -> Bool
+hasInts t =
+  not $ null $ intRanges $ t
+
 relateTys' :: (Ident,Ty) -> OpIdent -> (Ident,Ty) -> PrologWriter ()
 relateTys' t1 "==" t2 = do
   plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2
-  when ((not $ null $ intRanges $ snd t1) && (not $ null $ intRanges $ snd t2)) $ do
+  when (hasInts (snd t1) && hasInts (snd t2)) $
     plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2
 relateTys' t1 "/=" t2 = do
-  plFact $ tyBSPL t1 ++ " #\\= " ++ tyBSPL t2
+  when (hasInts (snd t1) && hasInts (snd t2)) $
+    plFact $ tyIPL t1 ++ " #\\= " ++ tyIPL t2
 relateTys' t1 "<=" t2= do
   plFact $ tyIPL t1 ++ " #=< " ++ tyIPL t2
 relateTys' t1 "<" t2 = do
   plFact $ tyIPL t1 ++ " #< " ++ tyIPL t2
+relateTys' t1 ">=" t2= do
+  plFact $ tyIPL t1 ++ " #>= " ++ tyIPL t2
+relateTys' t1 ">" t2 = do
+  plFact $ tyIPL t1 ++ " #> " ++ tyIPL t2
+relateTys' _ op _ =
+  throwError $ "relateTys' not (yet) implemented for op relation: " ++ show op
 
 tyBSPL :: (Ident,Ty) -> PL
 tyBSPL (i,_) = "T" ++ show i ++ "bs"

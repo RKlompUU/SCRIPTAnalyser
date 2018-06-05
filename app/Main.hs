@@ -90,9 +90,7 @@ prologVerify bs =
 
 verifyC :: String -> (Int,ValConstraint) -> IO (String,Bool)
 verifyC fn (i,c) = do
-  let expected = if cBool c
-                  then "true."
-                  else "false."
+  let expected = "true."
   (c,r,e) <- readProcessWithExitCode "/usr/bin/swipl" [fn] ("s" ++ show i ++ ".")
   return $ ("***\n" ++ "Expecting: " ++ expected ++ "\n" ++ r ++ e ++ "***\n",isInfixOf expected r)
 

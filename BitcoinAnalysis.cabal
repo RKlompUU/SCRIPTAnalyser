@@ -34,6 +34,7 @@ library
     --  Constraints.Solver
       Constraints.Types
       Constraints.ToProlog
+      KlompStandard
   other-modules:
       Paths_BitcoinAnalysis
       Bitcoin.Misc.BigInt

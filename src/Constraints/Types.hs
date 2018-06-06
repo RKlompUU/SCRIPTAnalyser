@@ -38,6 +38,7 @@ data Expr where
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Show,Eq,Ord,T.Typeable,TD.Data)
 
+
 maxN = 0x7fffffff -- 32 bit signed int
 maxBSL = 520 -- bytes
 maxIntBSL = 4

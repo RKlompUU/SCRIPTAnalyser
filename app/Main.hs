@@ -82,16 +82,18 @@ prologVerify bs =
     Right pl -> do
       let fn = "/tmp/BitcoinAnalysis-script.pl"
       writeFile fn pl
-      results <- mapM (verifyC fn) (zip [0..] (val_cnstrs bs))
-      let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ concat (map fst results)
-      if all snd results
+      --results <- mapM (verifyC fn) (zip [0..] (val_cnstrs bs))
+      result <- verifyC fn (-1,undefined)
+      let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ fst result --concat (map fst results)
+      if snd result
         then return $ Right (r,bs)
         else return $ Left r
 
 verifyC :: String -> (Int,ValConstraint) -> IO (String,Bool)
 verifyC fn (i,c) = do
   let expected = "true."
-  (c,r,e) <- readProcessWithExitCode "/usr/bin/swipl" [fn] ("s" ++ show i ++ ".")
+  let str = "s" ++ (if i == -1 then "" else show i) ++ "."
+  (c,r,e) <- readProcessWithExitCode "/usr/bin/swipl" [fn] str
   return $ ("***\n" ++ "Expecting: " ++ expected ++ "\n" ++ r ++ e ++ "***\n",isInfixOf expected r)
 
 (!?) :: [a] -> Int -> Maybe a

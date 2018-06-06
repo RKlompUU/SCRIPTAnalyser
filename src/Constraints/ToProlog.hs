@@ -65,7 +65,16 @@ bToProlog :: PrologWriter ()
 bToProlog = do
   tell $ ":- use_module(library(clpfd)).\n\n"
   css <- val_cnstrs <$> buildState <$> ask
-  mapM_ (\(i,c) -> addStmt i c) (zip [0..] css)
+
+
+  tell $ "s :-\n"
+
+  let es = nub $ concatMap esInC css
+  mapM_ tellTy es
+
+  mapM_ cToProlog css
+--  mapM_ (\(i,c) -> addStmt i c) (zip [0..] css)
+  tell "(#\\ 0).\n"
 
 tellTy :: Expr -> PrologWriter ()
 tellTy e =
@@ -81,7 +90,6 @@ addStmt i c = do
   tell "("
   local (\sk -> sk {factSep = " #/\\\n"}) (cToProlog c)
   --tell "true.\n"
-  tell "(#\\ 0)).\n"
 
 cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) =
@@ -119,6 +127,9 @@ e2Prolog e
     if atom2Bool e
       then return ()
       else contradiction
+e2Prolog e@(Var x) = do
+  t <- askTy e
+  plFact $ tyBSPL t ++ " #\\= 0"
 e2Prolog e@(Op e1 op e2)
   | any (==op) cmpOps = do
     relateTys e1 op e2
@@ -143,6 +154,9 @@ e2Prolog (Not e)
     if not $ atom2Bool e
       then return ()
       else contradiction
+e2Prolog (Not e@(Var x)) = do
+  t <- askTy e
+  plFact $ tyBSPL t ++ " #= 0"
 e2Prolog (Not (Op e1 op e2))
   | isJust flippedOp =
     relateTys e1 (fromJust flippedOp) e2

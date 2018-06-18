@@ -160,6 +160,8 @@ annotTy ETrue =
   (ETrue, true)
 annotTy EFalse =
   (EFalse, false)
+annotTy e@(Not _) =
+  (e, bool)
 annotTy e@(Op _ op _)
   | any (==op) (cmpOps ++ boolOps) =
     (e, bool)

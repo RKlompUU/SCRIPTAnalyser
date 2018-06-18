@@ -33,18 +33,20 @@ main = do
   --    0: i/prolog/nonredeemable,
   --        where i = the lowest number of variables that need to match sig or hash
   --    1: verbose
-  let m = fromMaybe "0" (args !? 0)
+  let m = fromMaybe "0" (args !? 2)
+  let preVerdict = fromMaybe "" (args !? 1)
+  let dir = fromMaybe "/tmp/" (args !? 0)
 
   bs <- B.pack <$> getLine
   let bs' = bs
   let script = decode bs'
 
   ast <- E.catch (E.evaluate $ buildAST (scriptOps script))
-                 (\e -> putStrLn ("parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall))) >> exitFailure)
+                 (\e -> putStrLn (preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall))) >> exitFailure)
   let buildStates = genBuildStates ast
       successBuilds = mapMaybe (either (const Nothing) Just) buildStates
 
-  logicBuilds <- mapM prologVerify successBuilds
+  logicBuilds <- mapM (prologVerify dir) successBuilds
   let logicBuildsInfo = map (either id fst) logicBuilds
       logicOKBuilds = mapMaybe (either (const Nothing) Just) logicBuilds
       i = minimum
@@ -71,16 +73,16 @@ main = do
           putStrLn $ "------V-E-R-D-I-C-T------"
     otherwise -> return ()
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
-  when (null successBuilds) $ putStrLn "type errors" >> exitFailure
-  when (null logicOKBuilds) $ putStrLn "nonredeemable" >> exitFailure
-  putStrLn "types correct" >> exitSuccess
+  when (null successBuilds) $ putStrLn (preVerdict ++ "type errors") >> exitFailure
+  when (null logicOKBuilds) $ putStrLn (preVerdict ++ "nonredeemable") >> exitFailure
+  putStrLn (preVerdict ++ "types correct") >> exitSuccess
 
-prologVerify :: BuildState -> IO (Either String (String,BuildState))
-prologVerify bs =
+prologVerify :: String -> BuildState -> IO (Either String (String,BuildState))
+prologVerify dir bs =
   case branchToProlog bs of
     Left e -> return $ Left e
     Right pl -> do
-      let fn = "/tmp/BitcoinAnalysis-script.pl"
+      let fn = dir ++ "BitcoinAnalysis-script.pl"
       writeFile fn pl
       --results <- mapM (verifyC fn) (zip [0..] (val_cnstrs bs))
       result <- verifyC fn (-1,undefined)

@@ -315,12 +315,12 @@ stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 
 
 stModOp OP_SIZE = peakStack >>= \v -> (uncurry pushStack) (annotTy (Length v))
+stModOp OP_NOT = popStack >>= \v -> (uncurry pushStack) (annotTy (Not v))
 {-
 stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))
 stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
 stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
 stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
-stModOp OP_NOT = popStack >>= \v -> pushStack (Not v)
 -}
 
 stModOp OP_ADD = opStack "+"

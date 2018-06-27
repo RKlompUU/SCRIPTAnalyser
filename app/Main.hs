@@ -11,6 +11,8 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import Data.List
 import Data.Maybe
 
+import qualified Data.Map.Lazy as M
+
 import Constraints.Gen
 import Constraints.Types
 import Constraints.ToProlog
@@ -30,7 +32,8 @@ printHelp = do
              "\tArg 1 (optional): verbosity level\n" ++
              "\t\t0: minimal print, only prints verdicts\n" ++
              "\t\t1: Verbose prints, additionally prints inferred (default) constraints\n" ++
-             "\t\t>=2: Verbose prints (debugging mode), additionally prints prolog related information\n" ++
+             "\t\t2: _More_ verbose prints, additionally prints inferred types of expressions, as well as a trace of stack mutations\n" ++
+             "\t\t>=3: Verbose prints (debugging mode), additionally prints prolog related information\n" ++
              "\tArg 2 (optional): path for creating temporary prolog code file (default is /tmp/)\n" ++
              "\tArg 3 (optional): string to prepend the verdict line (useful to track metadata through large batch computations)"
   exitFailure
@@ -80,10 +83,10 @@ main = do
       putStrLn $ "-------------------------"
 
       putStrLn $ "-------------------------"
-      putStrLn $ dumpBuildStates buildStates
+      putStrLn $ dumpBuildStates buildStates m
       putStrLn $ "-------------------------"
 
-  when (m >= 2) $ do -- Verbose (debug) section
+  when (m >= 3) $ do -- Verbose (debug) section
       putStrLn $ "-------------------------"
       putStrLn $ dumpList logicBuildsInfo
       putStrLn $ "-------------------------"
@@ -128,16 +131,24 @@ dumpList :: [String] -> String
 dumpList xs =
   intercalate "\n-----------\n" xs
 
-dumpBuildStates :: [Either (BuildState,String) BuildState] -> String
-dumpBuildStates xs =
-  let xs' = zip xs [0..]
-      f   = \(x,i) -> "-------\n" ++ show i ++ "\n" ++
+dumpBuildStates :: [Either (BuildState,String) BuildState] -> Int -> String
+dumpBuildStates xs verbosity =
+  let xs' = zip xs [1..]
+      f   = \(x,i) -> "-------\nBranch ID: " ++ show i ++ "\n" ++
                       case x of
-                        Left (b,e) -> "!" ++ e ++ "!\n" ++ show b ++ "\n"
-                        Right b -> dumpBuildState b ++ "\n"
+                        Left (b,e) -> "This execution branch contains type errors: " ++ e ++ "!\n" ++ dumpBuildState b verbosity ++ "\n"
+                        Right b -> dumpBuildState b verbosity ++ "\n"
   in intercalate "\n"
      $ map f xs'
 
-dumpBuildState :: BuildState -> String
-dumpBuildState b =
-  show b
+dumpBuildState :: BuildState -> Int -> String
+dumpBuildState b verbosity =
+  let trace = "Stack trace:\n\t" ++
+              (intercalate "\n\t" $ map show (muts b))
+      vconstrs = "Inferred constraints:\n\t" ++
+                 (intercalate "\n\t" $ map show (val_cnstrs b))
+      tconstrs = "Inferred types:\n\t" ++
+                 (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs b))
+      st = "Resulting symbolic stack:\n\t[" ++
+           (intercalate ",\n\t" $ map show (stack b)) ++ "]"
+  in vconstrs ++ (if verbosity >= 2 then "\n" ++ tconstrs ++ "\n" ++ trace else "") ++ "\n" ++ st

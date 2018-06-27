@@ -24,6 +24,17 @@ replaceX (f,t) (x:xs)
   | f == x = t : replaceX (f,t) xs
   | True   = x : replaceX (f,t) xs
 
+printHelp :: IO ()
+printHelp = do
+  putStrLn $ "Usage:\n" ++
+             "\tArg 1 (optional): verbosity level\n" ++
+             "\t\t0: minimal print, only prints verdicts\n" ++
+             "\t\t1: Verbose prints, additionally prints inferred (default) constraints\n" ++
+             "\t\t>=2: Verbose prints (debugging mode), additionally prints prolog related information\n" ++
+             "\tArg 2 (optional): path for creating temporary prolog code file (default is /tmp/)\n" ++
+             "\tArg 3 (optional): string to prepend the verdict line (useful to track metadata through large batch computations)"
+  exitFailure
+
 -- If nonredeemable, exit code = failure
 -- If redeemable or requires prolog to determine this (which is not yet implemented), exit code = success
 main :: IO ()
@@ -33,7 +44,14 @@ main = do
   --    0: i/prolog/nonredeemable,
   --        where i = the lowest number of variables that need to match sig or hash
   --    1: verbose
-  let m = fromMaybe "0" (args !? 0)
+  --    2: verbose (debug level)
+  case (args !? 0) of
+    Just n -> if not (all (\c -> any (==c) "0123456789") n)
+                then printHelp
+                else return ()
+    Nothing -> return ()
+
+  let m = (read $ fromMaybe "1" (args !? 0)) :: Int
   let dir = fromMaybe "/tmp/" (args !? 1)
   let preVerdict = fromMaybe "" (args !? 2)
 
@@ -53,25 +71,25 @@ main = do
         $ map length
         $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
 
-  case m of
-    "1" -> do -- Verbose section
-          putStrLn (show $ bs')
-          putStrLn (show script)
+  when (m >= 1) $ do -- Verbose section
+      putStrLn (show $ bs')
+      putStrLn (show script)
 
-          putStrLn $ "-------------------------"
-          putStrLn $ show ast
-          putStrLn $ "-------------------------"
+      putStrLn $ "-------------------------"
+      putStrLn $ show ast
+      putStrLn $ "-------------------------"
 
-          putStrLn $ "-------------------------"
-          putStrLn $ dumpBuildStates buildStates
-          putStrLn $ "-------------------------"
+      putStrLn $ "-------------------------"
+      putStrLn $ dumpBuildStates buildStates
+      putStrLn $ "-------------------------"
 
-          putStrLn $ "-------------------------"
-          putStrLn $ dumpList logicBuildsInfo
-          putStrLn $ "-------------------------"
+  when (m >= 2) $ do -- Verbose (debug) section
+      putStrLn $ "-------------------------"
+      putStrLn $ dumpList logicBuildsInfo
+      putStrLn $ "-------------------------"
 
-          putStrLn $ "------V-E-R-D-I-C-T------"
-    otherwise -> return ()
+  putStrLn $ "------V-E-R-D-I-C-T------"
+
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
   when (null successBuilds) $ putStrLn (preVerdict ++ "type errors") >> exitFailure
   when (null logicOKBuilds) $ putStrLn (preVerdict ++ "nonredeemable") >> exitFailure

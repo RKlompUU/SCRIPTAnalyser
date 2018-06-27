@@ -33,9 +33,9 @@ main = do
   --    0: i/prolog/nonredeemable,
   --        where i = the lowest number of variables that need to match sig or hash
   --    1: verbose
-  let m = fromMaybe "0" (args !? 2)
-  let preVerdict = fromMaybe "" (args !? 1)
-  let dir = fromMaybe "/tmp/" (args !? 0)
+  let m = fromMaybe "0" (args !? 0)
+  let dir = fromMaybe "/tmp/" (args !? 1)
+  let preVerdict = fromMaybe "" (args !? 2)
 
   bs <- B.pack <$> getLine
   let bs' = bs
@@ -75,7 +75,7 @@ main = do
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
   when (null successBuilds) $ putStrLn (preVerdict ++ "type errors") >> exitFailure
   when (null logicOKBuilds) $ putStrLn (preVerdict ++ "nonredeemable") >> exitFailure
-  putStrLn (preVerdict ++ "types correct") >> exitSuccess
+  putStrLn (preVerdict ++ "types correct, " ++ show (length logicOKBuilds)) >> exitSuccess
 
 prologVerify :: String -> BuildState -> IO (Either String (String,BuildState))
 prologVerify dir bs =

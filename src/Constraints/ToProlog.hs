@@ -133,6 +133,9 @@ e2Prolog e@(Var x) = do
 e2Prolog e@(Op e1 op e2)
   | any (==op) cmpOps = do
     relateTys e1 op e2
+--e2Prolog (Op e1 op e2)
+--  | any (==op) intOps = do
+--    undefined
 e2Prolog (Op e1 "/\\" e2) = do
   e2Prolog e1
   e2Prolog e2

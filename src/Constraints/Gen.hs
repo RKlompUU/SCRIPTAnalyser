@@ -29,7 +29,7 @@ genBuildStates script
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
-  tySet e true
+  tySet e bool
   addCnstr (C_IsTrue e)
 
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
@@ -150,69 +150,6 @@ genCnstrs (ScriptITE b0 b1 cont) = do
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
-{-
-genCnstrs (ScriptOp OP_EQUAL cont) = do
-  let stModEq = (\b -> do
-                      v_2 <- popStack
-                      v_1 <- popStack
-                      if b
-                        then pushStack (Op v_1 "==" v_2) true
-                        else pushStack (Op v_1 "==" v_2) false
-                )
-  ss0 <- branched stModEq True  cont
-  ss1 <- branched stModEq False cont
-  return $ ss0 ++ ss1
-genCnstrs (ScriptOp OP_0NOTEQUAL cont) = do
-  let stMod0NotEq = (\b -> do
-                      v_1 <- popStack
-                      if b
-                        then pushStack v_1 true
-                        else pushStack v_1 false
-                    )
-  ss0 <- branched stMod0NotEq True  cont
-  ss1 <- branched stMod0NotEq False cont
-  return $ ss0 ++ ss1
--}
-
-{-
-genCnstrs (ScriptOp OP_CHECKSIG cont) = do
-  let stModSig = (\b -> do
-                        v_2 <- popStack
-                        v_1 <- popStack
-                        if b
-                          then do
-                            tySet v_1 skTy
-                            tySet v_2 pkTy
-                            tySet (Sig v_1 v_2) true
-                            (uncurry pushStack) (annotTy ETrue)
-                          else do
-                            tySet (Sig v_1 v_2) false
-                            (uncurry pushStack) (annotTy EFalse)
-                 )
-  ss0 <- branched stModSig True  cont
-  ss1 <- branched stModSig False cont
-  return $ ss0 ++ ss1
--}
-
-{-
-genCnstrs (ScriptOp OP_CHECKMULTISIG cont) = do
-  let stModMultiSig = (\b -> do
-          n_p  <- e2i <$> popStack
-          ks_p <- popsStack n_p
-          n_s  <- e2i <$> popStack
-          ks_s <- popsStack n_s
-          popStack -- Due to a bug in the Bitcoin implementation :)
-          if b
-            then do
-              nc <- newConstr $ undefined -- ExprConstr $ MultiSig ks_s ks_p
-              cnstrsMod (AndConstr nc)
-              pushStack (ConstInt 1)
-            else
-              pushStack (ConstInt 0))
-  ss0 <- branched stModMultiSig True  cont
-  ss1 <- branched stModMultiSig False cont
-  return $ ss0 ++ ss1
--}
 
 genCnstrs (ScriptOp op cont) | isJust op' =
   genCnstrs (ScriptOp (fromJust op') (ScriptOp OP_VERIFY cont))
@@ -378,7 +315,7 @@ stModOp OP_CHECKMULTISIG = do
   pushStack (MultiSig ks_s ks_p) bool
 
 -- DISABLED OP_CODES
-stModOp op | any (== op) disabledOps = failBranch "Error, disabled OP used"
+stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op
 
 stModOp op =
   failBranch $ "Error, no stModOp implementation for operator: " ++ show op

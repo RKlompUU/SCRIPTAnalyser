@@ -16,3 +16,6 @@ Call BitcoinAnalysis.exe, with the output script in stdin, and optionally passin
 
 For example, if file scriptA contains an output script (in ByteString format, the same format as these occur in the Blockchain itself), run the following in Bash: BitcoinAnalysis.exe < scriptA
 The same but with more verbose output: BitcoinAnalysis.exe 2 < scriptA
+
+
+Some example output scripts can be found in folder scripts/

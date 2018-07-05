@@ -3,6 +3,7 @@
 ###### Installation
 
 Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)
+Dependency: swi-prolog (http://www.swi-prolog.org/Download.html)
 
 In any directory of this repository run:
   stack install

@@ -1,4 +1,4 @@
-# BitcoinAnalysis
+# SCRIPT Analysis
 
 ** Installation
 

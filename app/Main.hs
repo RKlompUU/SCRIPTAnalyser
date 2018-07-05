@@ -5,6 +5,7 @@ import System.Exit
 import System.Process
 import System.Environment
 import Script.Parser
+import Script.AST
 import Data.Bitcoin.Script
 import qualified Data.ByteString.Lazy.Char8 as B
 
@@ -62,7 +63,7 @@ main = do
   let bs' = bs
   let script = decode bs'
 
-  ast <- E.catch (E.evaluate $ buildAST (scriptOps script))
+  ast <- E.catch (E.evaluate $ runFillLabels $ buildAST (scriptOps script))
                  (\e -> putStrLn (preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall))) >> exitFailure)
   let buildStates = genBuildStates ast
       successBuilds = mapMaybe (either (const Nothing) Just) buildStates

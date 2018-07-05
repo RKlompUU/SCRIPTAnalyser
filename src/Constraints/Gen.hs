@@ -43,7 +43,7 @@ genV :: BranchBuilder Expr
 genV = do
   st <- get
   let v = Var (freshV st)
-  put $ st {freshV = freshV st + 1, muts = Popped v []: muts st}
+  put $ st {freshV = freshV st - 1, muts = Popped v []: muts st}
   tySet v top
   return $ v
 
@@ -151,10 +151,10 @@ genCnstrs (ScriptITE b0 b1 cont) = do
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 
-genCnstrs (ScriptOp op cont) | isJust op' =
-  genCnstrs (ScriptOp (fromJust op') (ScriptOp OP_VERIFY cont))
+genCnstrs (ScriptOp lbl op cont) | isJust op' =
+  genCnstrs (ScriptOp lbl (fromJust op') (ScriptOp lbl OP_VERIFY cont))
   where op' = lookup op verifyAfterOps
-genCnstrs (ScriptOp op cont) = do
+genCnstrs (ScriptOp _ op cont) = do
   withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask

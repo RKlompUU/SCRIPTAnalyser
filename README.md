@@ -22,7 +22,7 @@ The same but with more verbose output: stack exec BitcoinAnalysis-exe -- 2 < scr
 Some example output scripts can be found in folder scripts/
 
 
-###### Understanding the BitcoinAnalysis-exe's output
+###### Understanding BitcoinAnalysis-exe's output
 
 (Note: this section will only describe the default verbosity output mode)
 

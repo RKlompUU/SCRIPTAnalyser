@@ -10,7 +10,7 @@ In any directory of this repository run:
 
 ###### Applying the tool
 
-The executable (BitcoinAnalysis.exe) can be executed in any directory of this repository through Stack as follows: stack exec BitcoinAnalysis-exe -- _arguments_
+The executable (BitcoinAnalysis-exe) can be executed in any directory of this repository through Stack as follows: stack exec BitcoinAnalysis-exe -- _arguments_
 
 Call BitcoinAnalysis-exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument 'help' for information regarding arguments)
 

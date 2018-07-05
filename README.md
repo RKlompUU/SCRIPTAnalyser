@@ -20,3 +20,14 @@ The same but with more verbose output: BitcoinAnalysis.exe 2 < scriptA
 
 
 Some example output scripts can be found in folder scripts/
+
+
+** Understanding the BitcoinAnalysis.exe's output
+
+(Note: this section will only describe the non-verbose output mode)
+
+For every unique branch of the supplied output SCRIPT, the tool will print a verdict under a distinct "***** Gamma Solution for branch *****" section
+
+In this section, the respective branch's decision points are shown (i.e. for every encountered IF operation, is its True branch traversed or is its False branch traversed?)
+
+Furthermore, the inferred constraints are printed along with the final resulting symbolic stack (note, at this point we have already performed an additional OP_VERIFY, thus the constraint that the resulting full execution of this branch must end with a true value on the stack is already in the inferred constraints set)

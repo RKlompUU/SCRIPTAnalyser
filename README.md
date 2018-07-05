@@ -24,7 +24,7 @@ Some example output scripts can be found in folder scripts/
 
 ###### Understanding the BitcoinAnalysis.exe's output
 
-(Note: this section will only describe the non-verbose output mode)
+(Note: this section will only describe the default verbosity output mode)
 
 For every unique branch of the supplied output SCRIPT, the tool will print a verdict under a distinct "***** Gamma Solution for branch *****" section
 

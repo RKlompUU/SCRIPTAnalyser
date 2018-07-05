@@ -5,6 +5,7 @@ import Control.Monad.State.Lazy
 import Control.Monad.Except
 
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BSB
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe
@@ -38,8 +39,31 @@ data Expr where
 
   Var   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
-  deriving (Show,Eq,Ord,T.Typeable,TD.Data)
+  deriving (Eq,Ord,T.Typeable,TD.Data)
 
+instance Show Expr where
+  show (ConstInt i) =
+    "Int " ++ show i
+  show (ConstBS bs) =
+    "BS_" ++ show (BS.length bs) ++ " " ++ show ((BSB.toLazyByteString . BSB.byteStringHex) bs)
+  show EFalse =
+    "False"
+  show ETrue =
+    "True"
+  show (Not e) =
+    "Not (" ++ show e ++ ")"
+  show (Length e) =
+    "Length (" ++ show e ++ ")"
+  show (Hash e i) =
+    "Hash_" ++ show i ++ " (" ++ show e ++ ")"
+  show (Sig e1 e2) =
+    "Sig (" ++ show e1 ++ ") (" ++ show e2 ++ ")"
+  show (MultiSig e1s e2s) =
+    "MultiSig " ++ show e1s ++ " " ++ show e2s
+  show (Var i) =
+    "X_" ++ show i
+  show (Op e1 op e2) =
+    "(" ++ show e1 ++ ") " ++ op ++ " (" ++ show e2 ++ ")"
 
 maxN = 0x7fffffff -- 32 bit signed int
 maxBSL = 520 -- bytes

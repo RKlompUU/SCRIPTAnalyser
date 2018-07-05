@@ -10,13 +10,13 @@ In any directory of this repository run:
 
 ###### Applying the tool
 
-The executable (BitcoinAnalysis.exe) is in the set installation directory of the installed Stack tool
+The executable (BitcoinAnalysis.exe) can be executed in any directory of this repository through Stack as follows: stack exec BitcoinAnalysis.exe
 
 Call BitcoinAnalysis.exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument '--help' for information regarding arguments)
 
-For example, if file scriptA contains an output script (in ByteString format, the same format as SCRIPTs occur in the Blockchain itself), run the following in Bash: BitcoinAnalysis.exe < scriptA
+For example, if file scriptA contains an output script (in ByteString format, the same format as SCRIPTs occur in the Blockchain itself), run the following in Bash: stack exec BitcoinAnalysis.exe < scriptA
 
-The same but with more verbose output: BitcoinAnalysis.exe 2 < scriptA
+The same but with more verbose output: stack exec BitcoinAnalysis.exe 2 < scriptA
 
 
 Some example output scripts can be found in folder scripts/

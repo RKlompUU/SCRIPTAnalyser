@@ -2,7 +2,7 @@
 
 ###### Installation
 
-Dependency: Haskell's Stack
+Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)
 
 In any directory of this repository run:
   stack install

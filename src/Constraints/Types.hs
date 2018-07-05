@@ -14,6 +14,8 @@ import qualified Data.Range.Range as R
 import qualified Debug.Trace as D
 import Bitcoin.Script.Integer
 
+import Script.AST
+
 import KlompStandard
 import qualified Data.Typeable as T
 import qualified Data.Data as TD
@@ -235,6 +237,7 @@ data BuildState =
     stack      :: Stack,
     freshV     :: Ident,
     nTy        :: Ident,
+    branchInfo :: [(Label,Bool)],
     muts       :: [BranchMutation]
 --    altStack  :: Stack,   Alststack ignored for now
 --    freshAltV :: Ident,   Alststack ignored for now
@@ -244,6 +247,7 @@ initBuildState =
     ty_cnstrs  = initialTypes,
     val_cnstrs = [],
     stack      = [],
+    branchInfo = [],
     freshV     = 0,
     nTy        = 0,
     muts       = []

@@ -134,17 +134,19 @@ dumpList xs =
 
 dumpBuildStates :: [Either (BuildState,String) BuildState] -> Int -> String
 dumpBuildStates xs verbosity =
-  let xs' = zip xs [1..]
-      f   = \(x,i) -> "-------\nBranch ID: " ++ show i ++ "\n" ++
-                      case x of
-                        Left (b,e) -> "This execution branch contains type errors: " ++ e ++ "!\n" ++ dumpBuildState b verbosity ++ "\n"
-                        Right b -> dumpBuildState b verbosity ++ "\n"
+  let f x = "****** Gamma solution for branch ******\n" ++
+            case x of
+              Left (b,e) -> "This execution branch contains type errors: " ++ e ++ "!\n" ++ dumpBuildState b verbosity ++ "\n"
+              Right b -> dumpBuildState b verbosity ++ "\n"
   in intercalate "\n"
-     $ map f xs'
+     $ map f xs
 
 dumpBuildState :: BuildState -> Int -> String
 dumpBuildState b verbosity =
-  let trace = "Stack trace:\n\t" ++
+  let showJump = \(lbl,b) -> "Line " ++ show lbl ++ ": " ++ show b
+      jumps = intercalate "\n\t-> "
+            $ map showJump (reverse $ branchInfo b)
+      trace = "Stack trace:\n\t" ++
               (intercalate "\n\t" $ map show (muts b))
       vconstrs = "Inferred constraints:\n\t" ++
                  (intercalate "\n\t" $ map show (val_cnstrs b))
@@ -152,4 +154,8 @@ dumpBuildState b verbosity =
                  (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs b))
       st = "Resulting symbolic stack:\n\t[" ++
            (intercalate ",\n\t" $ map show (stack b)) ++ "]"
-  in vconstrs ++ (if verbosity >= 2 then "\n" ++ tconstrs ++ "\n" ++ trace else "") ++ "\n" ++ st
+  in "Branch's decision points: \n" ++
+     (if (not . null) jumps then "\t-> " ++ jumps else "") ++ "\n" ++
+     vconstrs ++
+     (if verbosity >= 2 then "\n" ++ tconstrs ++ "\n" ++ trace else "") ++ "\n" ++
+     st

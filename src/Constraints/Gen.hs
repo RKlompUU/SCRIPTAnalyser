@@ -130,6 +130,11 @@ pushsAltStack es = mapM_ pushAltStack es
 -- Main constraint generation functions
 --
 
+noteBranchJump :: Label -> Bool -> BranchBuilder ()
+noteBranchJump lbl b = do
+  st <- get
+  put $ st { branchInfo = (lbl,b) : branchInfo st }
+
 branched :: (Bool -> BranchBuilder ()) ->
             Bool ->
             ScriptAST ->
@@ -137,10 +142,11 @@ branched :: (Bool -> BranchBuilder ()) ->
 branched f b cont = withReader (>> f b) (genCnstrs cont)
 
 genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
-genCnstrs (ScriptITE b0 b1 cont) = do
+genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
   let stModITE = (\b -> do
                       v <- popStack
                       t <- tyGet v
+                      noteBranchJump ifLbl b
                       if b
                         then addCnstr (C_IsTrue v) >>
                              tySet v true
@@ -151,10 +157,10 @@ genCnstrs (ScriptITE b0 b1 cont) = do
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 
-genCnstrs (ScriptOp lbl op cont) | isJust op' =
+genCnstrs stmnt@(ScriptOp lbl op cont) | isJust op' =
   genCnstrs (ScriptOp lbl (fromJust op') (ScriptOp lbl OP_VERIFY cont))
   where op' = lookup op verifyAfterOps
-genCnstrs (ScriptOp _ op cont) = do
+genCnstrs (ScriptOp lbl op cont) = do
   withReader (>> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask

@@ -5,7 +5,6 @@ import Control.Monad.State.Lazy
 import Control.Monad.Except
 
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Builder as BSB
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe
@@ -45,7 +44,7 @@ instance Show Expr where
   show (ConstInt i) =
     "Int " ++ show i
   show (ConstBS bs) =
-    "BS_" ++ show (BS.length bs) ++ " " ++ show ((BSB.toLazyByteString . BSB.byteStringHex) bs)
+    "BS_" ++ show (BS.length bs) ++ " " ++ printBSInHex bs
   show EFalse =
     "False"
   show ETrue =
@@ -235,7 +234,11 @@ tyGet e = do
 
 data ValConstraint where
   C_IsTrue :: Expr -> ValConstraint
-  deriving (Show,Eq)
+  deriving (Eq)
+
+instance Show ValConstraint where
+  show (C_IsTrue e) =
+    "Constraint: " ++ show e
 
 addCnstr :: ValConstraint -> BranchBuilder ()
 addCnstr c = do

@@ -75,22 +75,23 @@ main = do
         $ map length
         $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
 
-  when (m >= 1) $ do -- Verbose section
+  when (m >= 2) $ do
+      putStrLn "Program echo, followed by the lexed intermediate variant:"
       putStrLn (show $ bs')
       putStrLn (show script)
-
-      putStrLn $ "-------------------------"
+  when (m >= 1) $ do -- Verbose section
+      putStrLn $ "---------- AST ----------"
       putStrLn $ show ast
       putStrLn $ "-------------------------"
 
-      putStrLn $ "-------------------------"
+      putStrLn $ "-------- Inferred -------"
       putStrLn $ dumpBuildStates buildStates m
       putStrLn $ "-------------------------"
 
   when (m >= 3) $ do -- Verbose (debug) section
-      putStrLn $ "-------------------------"
+      putStrLn $ "------------------------"
       putStrLn $ dumpList logicBuildsInfo
-      putStrLn $ "-------------------------"
+      putStrLn $ "------------------------"
 
   putStrLn $ "------V-E-R-D-I-C-T------"
 

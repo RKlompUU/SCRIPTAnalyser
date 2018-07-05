@@ -4,9 +4,15 @@ module KlompStandard where
 import qualified Data.Typeable as T
 import qualified Data.Data as TD
 
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as BSB
+
 import Control.Monad.State.Lazy
 
 type CounterState a = State Int a
+
+printBSInHex :: BS.ByteString -> String
+printBSInHex = show . BSB.toLazyByteString . BSB.byteStringHex
 
 tickCounter :: CounterState Int
 tickCounter = do

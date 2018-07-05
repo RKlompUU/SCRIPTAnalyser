@@ -3,6 +3,7 @@ module Script.AST where
 
 import Data.Bitcoin.Script.Types
 
+import qualified Data.ByteString as BS
 import KlompStandard
 
 type Label = Int
@@ -13,6 +14,7 @@ data ScriptAST where
   ScriptTail :: ScriptAST
 
 instance Show ScriptAST where
+  show (ScriptOp l (OP_PUSHDATA bs _) cont) = show l ++ ":\tBS_" ++ show (BS.length bs) ++ " " ++ printBSInHex bs ++ ";\n" ++ show cont
   show (ScriptOp l op cont) = show l ++ ":\t" ++ show op ++ ";\n" ++ show cont
   show (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) =
     show ifLbl ++ ":\tIF {\n" ++

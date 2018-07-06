@@ -65,15 +65,8 @@ main = do
 
   ast <- E.catch (E.evaluate $ runFillLabels $ buildAST (scriptOps script))
                  (\e -> putStrLn (preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall))) >> exitFailure)
-  let buildStates = genBuildStates ast
-      successBuilds = mapMaybe (either (const Nothing) Just) buildStates
-
-  logicBuilds <- mapM (prologVerify dir) successBuilds
-  let logicBuildsInfo = map (either id fst) logicBuilds
-      logicOKBuilds = mapMaybe (either (const Nothing) Just) logicBuilds
-      i = minimum
-        $ map length
-        $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
+  let branchReports = genBuildStates ast
+  branchReports' <- mapM (prologVerify dir) branchReports
 
   when (m >= 2) $ do
       putStrLn "SCRIPT echo, followed by the lexed intermediate variant:"
@@ -86,25 +79,23 @@ main = do
 
       putStrLn $ "-------------------------"
       putStrLn $ "-------- Inferred -------"
-      putStrLn $ dumpBuildStates buildStates m
-
-  when (m >= 3) $ do -- Verbose (debug) section
-      putStrLn $ "-------------------------"
-      putStrLn $ "--------- Prolog --------"
-      putStrLn $ dumpList logicBuildsInfo
+      putStrLn $ dumpBranchReports branchReports' m
 
   putStrLn $ "------------------------"
   putStrLn $ "-------- Verdict -------"
 
-  -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
-  when (null successBuilds) $ putStrLn (preVerdict ++ "type errors") >> exitFailure
-  when (null logicOKBuilds) $ putStrLn (preVerdict ++ "nonredeemable") >> exitFailure
-  putStrLn (preVerdict ++ "types correct, " ++ show (length logicOKBuilds) ++ " branch(es) viable") >> exitSuccess
+  let successBuilds = filter (prologValid) branchReports'
 
-prologVerify :: String -> BuildState -> IO (Either String (String,BuildState))
-prologVerify dir bs =
-  case branchToProlog bs of
-    Left e -> return $ Left e
+  -- Non verbose section.
+  when (null successBuilds) $ putStrLn (preVerdict ++ "nonredeemable") >> exitFailure
+  putStrLn (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") >> exitSuccess
+
+prologVerify :: String -> BranchReport -> IO BranchReport
+prologVerify dir report@(BranchReport _ _ (Just err) _ _) =
+  return report
+prologVerify dir report =
+  case branchToProlog (symbolicEval report) of
+    Left e -> return $ report { prologReport = e }
     Right pl -> do
       let fn = dir ++ "BitcoinAnalysis-script.pl"
       writeFile fn pl
@@ -112,8 +103,8 @@ prologVerify dir bs =
       result <- verifyC fn (-1,undefined)
       let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ fst result --concat (map fst results)
       if snd result
-        then return $ Right (r,bs)
-        else return $ Left r
+        then return $ report { prologValid = True, prologReport = r }
+        else return $ report { prologReport = r }
 
 verifyC :: String -> (Int,ValConstraint) -> IO (String,Bool)
 verifyC fn (i,c) = do
@@ -134,32 +125,39 @@ dumpList :: [String] -> String
 dumpList xs =
   intercalate "\n-----------\n" xs
 
-dumpBuildStates :: [Either (BuildState,String) BuildState] -> Int -> String
-dumpBuildStates xs verbosity =
-  let f x = "***** Gamma solution for branch *****\n" ++
-            case x of
-              Left (b,e) -> "!!!!! This branch is unsolvable" ++
-                            (if verbosity >= 3 then ": " ++ e else "") ++
-                            " !!!!!\n" ++ dumpBuildState b verbosity ++ "\n"
-              Right b -> dumpBuildState b verbosity ++ "\n"
-  in intercalate "\n"
-     $ map f xs
+dumpBranchReports :: [BranchReport] -> Int -> String
+dumpBranchReports reports verbosity =
+  intercalate "\n" $ map (flip dumpBranchReport verbosity) reports
 
-dumpBuildState :: BuildState -> Int -> String
-dumpBuildState b verbosity =
-  let showJump = \(lbl,b) -> "Line " ++ show lbl ++ ": " ++ show b
+dumpBranchReport :: BranchReport -> Int -> String
+dumpBranchReport report verbosity =
+  let bs = symbolicEval report
+      showJump = \(lbl,b) -> "Line " ++ show lbl ++ ": " ++ show b
       jumps = intercalate "\n\t-> "
-            $ map showJump (reverse $ branchInfo b)
+            $ map showJump (reverse $ branchInfo bs)
       trace = "Stack trace:\n\t" ++
-              (intercalate "\n\t" $ map show (reverse $ muts b))
+              (intercalate "\n\t" $ map show (reverse $ muts bs))
       vconstrs = "Inferred constraints:\n\t" ++
-                 (intercalate "\n\t" $ map show (val_cnstrs b))
+                 (intercalate "\n\t" $ map show (val_cnstrs bs))
       tconstrs = "Inferred types:\n\t" ++
-                 (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs b))
+                 (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs bs))
       st = "Resulting symbolic stack:\n\t[" ++
-           (intercalate ",\n\t" $ map show (stack b)) ++ "]"
-  in "Branch's decision points: \n" ++
+           (intercalate ",\n\t" $ map show (stack bs)) ++ "]"
+      errMsg = if prologValid report
+                then ""
+                else "!!!!! This branch is unsolvable" ++
+                     (if verbosity >= 3 && isJust (symbolicErrs report) then ": " ++ fromJust (symbolicErrs report) else "") ++
+                     " !!!!!\n"
+      prolog = if verbosity >= 3
+                then "*** Generated prolog statements and evaluation:\n" ++ prologReport report
+                else "\n"
+  in "---\n" ++
+     "--- Symbolic evalution of branch " ++ show (branchID report) ++ "\n" ++
+     "---\n" ++
+     errMsg ++
+     "Branch's decision points:\n" ++
      (if (not . null) jumps then "\t-> " ++ jumps else "") ++ "\n" ++
      vconstrs ++
      (if verbosity >= 2 then "\n" ++ tconstrs ++ "\n" ++ trace else "") ++ "\n" ++
-     st
+     st ++ "\n" ++
+     prolog ++ "\n"

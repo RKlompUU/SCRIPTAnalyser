@@ -250,11 +250,11 @@ type BranchBuilder a = ExceptT String (State BuildState) a
 failBranch :: String -> BranchBuilder a
 failBranch = throwError
 
-unwrapBuildMonad :: BranchBuilder a -> Either (BuildState,String) BuildState
+unwrapBuildMonad :: BranchBuilder a -> BranchReport
 unwrapBuildMonad b =
   case flip runState (initBuildState) $ runExceptT b of
-    (Left e,st)    -> Left (st,e)
-    (Right _,st) -> Right st
+    (Left e,st)    -> branchReport { symbolicEval = st, symbolicErrs = Just e }
+    (Right _,st) -> branchReport { symbolicEval = st, symbolicErrs = Nothing }
 
 type Stack = [Expr]
 data BuildState =
@@ -278,6 +278,23 @@ initBuildState =
     freshV     = 0,
     nTy        = 0,
     muts       = []
+  }
+
+data BranchReport =
+  BranchReport {
+    branchID     :: Int,
+    symbolicEval :: BuildState,
+    symbolicErrs :: Maybe String,
+    prologValid  :: Bool,
+    prologReport :: String
+  }
+branchReport =
+  BranchReport {
+    branchID     = 0,
+    symbolicEval = undefined,
+    symbolicErrs = Just "Not applicable",
+    prologValid  = False,
+    prologReport = "Not applicable"
   }
 
 initialTypes = M.fromList [(EFalse,false),(ETrue,true)]

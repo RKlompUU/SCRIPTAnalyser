@@ -21,10 +21,11 @@ import Constraints.Types
 import qualified Data.Map as M
 
 
-genBuildStates :: ScriptAST -> [Either (BuildState,String) BuildState]
+genBuildStates :: ScriptAST -> [BranchReport]
 genBuildStates script
-  = map (\s -> unwrapBuildMonad (s >> finalizeBranch))
-  $ runReader (genCnstrs script) (return ())
+  = map (\(i,r) -> r { branchID = i })
+  $ zip [0..]
+  $ map (\s -> unwrapBuildMonad (s >> finalizeBranch)) (runReader (genCnstrs script) (return ()))
 
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do

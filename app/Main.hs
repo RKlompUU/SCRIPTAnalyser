@@ -152,7 +152,7 @@ dumpBranchReport report verbosity =
                 then "*** Generated prolog statements and evaluation:\n" ++ prologReport report
                 else ""
   in "---\n" ++
-     "--- Symbolic evalution of branch " ++ show (branchID report) ++ "\n" ++
+     "--- Symbolic evaluation report of execution branch " ++ show (branchID report) ++ "\n" ++
      "---\n" ++
      errMsg ++
      "Branch's decision points:\n" ++

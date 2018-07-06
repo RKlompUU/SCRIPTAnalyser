@@ -76,29 +76,30 @@ main = do
         $ map (knowledgeCnstrsWithVar . snd) logicOKBuilds
 
   when (m >= 2) $ do
-      putStrLn "Program echo, followed by the lexed intermediate variant:"
+      putStrLn "SCRIPT echo, followed by the lexed intermediate variant:"
       putStrLn (show $ bs')
       putStrLn (show script)
   when (m >= 1) $ do -- Verbose section
+      putStrLn $ "-------------------------"
       putStrLn $ "---------- AST ----------"
       putStrLn $ show ast
-      putStrLn $ "-------------------------"
 
+      putStrLn $ "-------------------------"
       putStrLn $ "-------- Inferred -------"
       putStrLn $ dumpBuildStates buildStates m
-      putStrLn $ "-------------------------"
 
   when (m >= 3) $ do -- Verbose (debug) section
-      putStrLn $ "------------------------"
+      putStrLn $ "-------------------------"
+      putStrLn $ "--------- Prolog --------"
       putStrLn $ dumpList logicBuildsInfo
-      putStrLn $ "------------------------"
 
-  putStrLn $ "------V-E-R-D-I-C-T------"
+  putStrLn $ "------------------------"
+  putStrLn $ "-------- Verdict -------"
 
   -- Non verbose section. Outputs one of these: redeemable/prolog/nonredeemable
   when (null successBuilds) $ putStrLn (preVerdict ++ "type errors") >> exitFailure
   when (null logicOKBuilds) $ putStrLn (preVerdict ++ "nonredeemable") >> exitFailure
-  putStrLn (preVerdict ++ "types correct, " ++ show (length logicOKBuilds)) >> exitSuccess
+  putStrLn (preVerdict ++ "types correct, " ++ show (length logicOKBuilds) ++ " branch(es) viable") >> exitSuccess
 
 prologVerify :: String -> BuildState -> IO (Either String (String,BuildState))
 prologVerify dir bs =
@@ -148,7 +149,7 @@ dumpBuildState b verbosity =
       jumps = intercalate "\n\t-> "
             $ map showJump (reverse $ branchInfo b)
       trace = "Stack trace:\n\t" ++
-              (intercalate "\n\t" $ map show (muts b))
+              (intercalate "\n\t" $ map show (reverse $ muts b))
       vconstrs = "Inferred constraints:\n\t" ++
                  (intercalate "\n\t" $ map show (val_cnstrs b))
       tconstrs = "Inferred types:\n\t" ++

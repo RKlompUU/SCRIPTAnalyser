@@ -79,7 +79,7 @@ main = do
 
       putStrLn $ "-------------------------"
       putStrLn $ "-------- Inferred -------"
-      putStrLn $ dumpBranchReports branchReports' m
+      putStr $ dumpBranchReports branchReports' m
 
   putStrLn $ "------------------------"
   putStrLn $ "-------- Verdict -------"
@@ -127,7 +127,7 @@ dumpList xs =
 
 dumpBranchReports :: [BranchReport] -> Int -> String
 dumpBranchReports reports verbosity =
-  intercalate "\n" $ map (flip dumpBranchReport verbosity) reports
+  intercalate "" $ map (flip dumpBranchReport verbosity) reports
 
 dumpBranchReport :: BranchReport -> Int -> String
 dumpBranchReport report verbosity =
@@ -150,7 +150,7 @@ dumpBranchReport report verbosity =
                      " !!!!!\n"
       prolog = if verbosity >= 3
                 then "*** Generated prolog statements and evaluation:\n" ++ prologReport report
-                else "\n"
+                else ""
   in "---\n" ++
      "--- Symbolic evalution of branch " ++ show (branchID report) ++ "\n" ++
      "---\n" ++

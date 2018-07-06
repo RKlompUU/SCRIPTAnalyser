@@ -136,9 +136,11 @@ dumpList xs =
 
 dumpBuildStates :: [Either (BuildState,String) BuildState] -> Int -> String
 dumpBuildStates xs verbosity =
-  let f x = "****** Gamma solution for branch ******\n" ++
+  let f x = "***** Gamma solution for branch *****\n" ++
             case x of
-              Left (b,e) -> "This execution branch contains type errors: " ++ e ++ "!\n" ++ dumpBuildState b verbosity ++ "\n"
+              Left (b,e) -> "!!!!! This branch is unsolvable" ++
+                            (if verbosity >= 3 then ": " ++ e else "") ++
+                            " !!!!!\n" ++ dumpBuildState b verbosity ++ "\n"
               Right b -> dumpBuildState b verbosity ++ "\n"
   in intercalate "\n"
      $ map f xs

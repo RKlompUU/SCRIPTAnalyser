@@ -13,19 +13,19 @@ In the root directory of this repository run:
 
 ###### Applying the tool
 
-The executable (BitcoinAnalysis-exe) can be executed in any directory of this repository through Stack as follows: stack exec BitcoinAnalysis-exe -- _arguments_
+The executable (SCRIPTAnalyser-exe) can be executed in any directory of this repository through Stack as follows: stack exec SCRIPTAnalyser-exe -- _arguments_
 
-Call BitcoinAnalysis-exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument 'help' for information regarding arguments)
+Call SCRIPTAnalyser-exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument 'help' for information regarding arguments)
 
-For example, if file scriptA contains an output script (in ByteString format, the same format as SCRIPTs occur in the Blockchain itself), run the following in Bash: stack exec BitcoinAnalysis-exe -- < scriptA
+For example, if file scriptA contains an output script (in ByteString format, the same format as SCRIPTs occur in the Blockchain itself), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
 
-The same but with more verbose output: stack exec BitcoinAnalysis-exe -- 2 < scriptA
+The same but with more verbose output: stack exec SCRIPTAnalyser-exe -- 2 < scriptA
 
 
 Some example output scripts can be found in folder scripts/
 
 
-###### Understanding BitcoinAnalysis-exe's output
+###### Understanding SCRIPTAnalyser-exe's output
 
 (Note: this section will only describe the default verbosity output mode)
 

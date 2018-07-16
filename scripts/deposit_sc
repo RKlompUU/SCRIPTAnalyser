@@ -1,0 +1,3 @@
+A -> B: A_pk
+B -> A: B_pk
+A: tx_1 =

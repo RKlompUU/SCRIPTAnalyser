@@ -4,14 +4,14 @@
 --
 -- hash: 1c6bbe5bc9b52aa84b36d7f60d203b0659e0417aa622f18a395aa7f0818cd7b2
 
-name:           BitcoinAnalysis
+name:           SCRIPTAnalyser
 version:        0.1.0.0
-description:    Please see the README on Github at <https://github.com/githubuser/BitcoinAnalysis#readme>
-homepage:       https://github.com/githubuser/BitcoinAnalysis#readme
-bug-reports:    https://github.com/githubuser/BitcoinAnalysis/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2018 Author name here
+description:    Please see the README on Github at https://github.com/RKlompUU/SCRIPTAnalyser
+homepage:       https://github.com/RKlompUU/SCRIPTAnalyser
+bug-reports:    https://github.com/RKlompUU/SCRIPTAnalyser/issues
+author:         Rick Klomp
+maintainer:     r.klomp@cs.stir.ac.uk
+copyright:      2018 Rick Klomp
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -23,7 +23,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/BitcoinAnalysis
+  location: https://github.com/RKlompUU/SCRIPTAnalyser
 
 library
   exposed-modules:
@@ -36,7 +36,7 @@ library
       Constraints.ToProlog
       KlompStandard
   other-modules:
-      Paths_BitcoinAnalysis
+      Paths_SCRIPTAnalyser
       Bitcoin.Misc.BigInt
       Bitcoin.Misc.OctetStream
       Bitcoin.Script.Integer
@@ -63,15 +63,15 @@ library
       transformers
   default-language: Haskell2010
 
-executable BitcoinAnalysis-exe
+executable SCRIPTAnalyser-exe
   main-is: Main.hs
   other-modules:
-      Paths_BitcoinAnalysis
+      Paths_SCRIPTAnalyser
   hs-source-dirs:
       app
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      BitcoinAnalysis
+      SCRIPTAnalyser
     , base >=4.7 && <5
     , containers
     , bytestring >= 0.10.8.1
@@ -81,15 +81,3 @@ executable BitcoinAnalysis-exe
       process
   default-language: Haskell2010
 
-test-suite BitcoinAnalysis-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_BitcoinAnalysis
-  hs-source-dirs:
-      test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      BitcoinAnalysis
-    , base >=4.7 && <5
-  default-language: Haskell2010

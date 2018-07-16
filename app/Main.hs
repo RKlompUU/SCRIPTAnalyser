@@ -14,6 +14,7 @@ import Data.Maybe
 
 import qualified Data.Map.Lazy as M
 
+import KlompStandard
 import Constraints.Gen
 import Constraints.Types
 import Constraints.ToProlog
@@ -137,7 +138,9 @@ dumpBranchReport report verbosity =
             $ map showJump (reverse $ branchInfo bs)
       trace = "Stack trace:\n\t" ++
               (intercalate "\n\t" $ map show (reverse $ muts bs))
-      vconstrs = "Inferred constraints:\n\t" ++
+      initialStack = "Required initial stack:\n" ++
+                     printStack (map Var [0,(-1)..freshV bs+1])
+      vconstrs = "Inferred additional constraints:\n\t" ++
                  (intercalate "\n\t" $ map show (val_cnstrs bs))
       tconstrs = "Inferred types:\n\t" ++
                  (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs bs))
@@ -157,7 +160,17 @@ dumpBranchReport report verbosity =
      errMsg ++
      "Branch's decision points:\n" ++
      (if (not . null) jumps then "\t-> " ++ jumps else "") ++ "\n" ++
+     initialStack ++
      vconstrs ++
      (if verbosity >= 2 then "\n" ++ tconstrs ++ "\n" ++ trace else "") ++ "\n" ++
      st ++ "\n" ++
      prolog ++ "\n"
+
+
+printStack :: Show a => [a] -> String
+printStack [] = "head -> |------------------|\n"
+printStack (x:xs) =
+  let sep = "\t|------------------|\n"
+      xs' = concatMap (\e -> "\t| " ++ show e ++ "\n") xs
+      x'  = "head -> | " ++ show x ++ "\n"
+  in sep ++ x' ++ xs' ++ sep

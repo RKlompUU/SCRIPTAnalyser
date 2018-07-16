@@ -11,6 +11,10 @@ import Control.Monad.State.Lazy
 
 type CounterState a = State Int a
 
+replace :: Eq a => (a, [a]) -> [a] -> [a]
+replace (x,x') xs
+  = concatMap (\y -> if x == y then x' else [y]) xs
+
 printBSInHex :: BS.ByteString -> String
 printBSInHex = show . BSB.toLazyByteString . BSB.byteStringHex
 

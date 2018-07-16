@@ -34,6 +34,6 @@ For every unique branch of the supplied output SCRIPT, the tool will print a ver
 In this section, the following information is printed:
 
 - The respective branch's decision points are shown (i.e. for every encountered IF operation, is its True branch traversed or is its False branch traversed?)
-- The symbolic stack that the input script must generate is printed.
+- The symbolic stack that the input script supply
 - The inferred constraints (on these supplied variables).
 - The final resulting symbolic stack (note, at this point we have already performed an additional OP_VERIFY, thus the constraint that the resulting full execution of this branch must end with a true value on the stack is already in the inferred constraints set)

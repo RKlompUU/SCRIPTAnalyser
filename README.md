@@ -1,4 +1,5 @@
-# SCRIPT Analysis
+# SCRIPT Analyser
+## Symbolic verification of Bitcoin's output scripts
 
 ###### Installation
 

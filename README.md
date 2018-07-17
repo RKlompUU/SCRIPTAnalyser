@@ -10,7 +10,7 @@ SCRIPT Analyser is a tool that infers from a given _output_ script the constrain
 
 The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. However, it does not yet support all types of operations. For example, the locktime operations are not yet supported.
 
-##### Installation
+#### Installation
 
 Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)
 
@@ -20,7 +20,7 @@ In the root directory of this repository run:
   stack install
 
 
-##### Applying the tool
+#### Applying the tool
 
 The executable (SCRIPTAnalyser-exe) can be executed in any directory of this repository through Stack as follows: stack exec SCRIPTAnalyser-exe -- _arguments_
 
@@ -34,7 +34,7 @@ The same but with more verbose output: stack exec SCRIPTAnalyser-exe -- 2 < scri
 Some example output scripts can be found in folder scripts/
 
 
-##### Understanding SCRIPTAnalyser-exe's output
+#### Understanding SCRIPTAnalyser-exe's output
 
 ![Alt text](.imgs/outputExample.png?raw=true "Example")
 

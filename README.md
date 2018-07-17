@@ -1,6 +1,8 @@
 # SCRIPT Analyser
 ## Symbolic verification of Bitcoin's output scripts
 
+![Alt text](.imgs/outputExampleA.png?raw=true "Example")
+
 SCRIPT Analyser is a tool that infers from a given _output_ script the constraints that must be met by an _input_ script to create a valid transaction. Consider for example a standard P2PkH output script, the tool will report that a correct input script must:
 - establish a stack containing 2 entries: X\_0 and X\_-1 (with X\_0 at the head of the stack)
 - X\_0 must be a correct preimage of the hash constant value present in the output script

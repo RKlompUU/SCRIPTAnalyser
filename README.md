@@ -1,6 +1,8 @@
 # SCRIPT Analyser
 ## Symbolic verification of Bitcoin's output scripts
 
+![Alt text](.imgs/outputExample.png?raw=true "Example")
+
 ###### Installation
 
 Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)

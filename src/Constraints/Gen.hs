@@ -335,6 +335,7 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
   l <- popStack
   let timeCnstr = Op (Var 1) "<" l
   tySet timeCnstr bool
+  tySet l bint
   addCnstr (C_IsTrue timeCnstr)
 
 -- DISABLED OP_CODES

@@ -64,9 +64,12 @@ instance Show Expr where
   show (Op e1 op e2) =
     "(" ++ show e1 ++ ") " ++ op ++ " (" ++ show e2 ++ ")"
 
-maxN = 0x7fffffff -- 32 bit signed int
+maxN  = 0x7fffffff -- 32 bit signed int
+maxBN = 0x7fffffffff -- 40 bit signed int (big int, only used for locktime)
+maxUN = 0xffffffff -- 32 bit unsigned int
 maxBSL = 520 -- bytes
 maxIntBSL = 4
+maxBigIntBSL = 5
 sigBL = 71
 pubBL = 65
 
@@ -131,13 +134,21 @@ int :: Ty
 int =
   Ty { intRanges = [R.SpanRange (-maxN) maxN],
        bsRanges  = [R.SpanRange 0 maxIntBSL] }
+bint :: Ty
+bint =
+  Ty { intRanges = [R.SpanRange (-maxBN) maxBN],
+       bsRanges  = [R.SpanRange 0 maxBigIntBSL] }
+uint32 :: Ty
+uint32 =
+ Ty { intRanges = [R.SpanRange 0 maxUN],
+      bsRanges  = [R.SpanRange 0 maxIntBSL] }
 bool :: Ty
 bool =
   Ty { intRanges = [R.SpanRange 0 1],
        bsRanges  = [R.SpanRange 0 1] }
 top :: Ty
 top =
- Ty { intRanges = [R.SpanRange (-maxN) maxN],
+ Ty { intRanges = [R.SpanRange (-maxBN) maxBN],
       bsRanges  = [R.SpanRange 0 maxBSL] }
 skTy :: Ty -- Secret key type
 skTy =
@@ -301,7 +312,7 @@ branchReport =
   }
 
 -- Var 1: represents the corresponding transaction's locktime value
-initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,int)]
+initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32)]
 
 
 knowledgeBased :: Expr -> Bool

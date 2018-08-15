@@ -174,7 +174,7 @@ data ScriptOp
     | OP_CHECKMULTISIGVERIFY
 
       -- Expansion
-    | OP_NOP1 | OP_CHECKLOCKTIMEVERIFY | OP_NOP3 | OP_NOP4 | OP_NOP5
+    | OP_NOP1 | OP_CHECKLOCKTIMEVERIFY | OP_CHECKSEQUENCEVERIFY | OP_NOP4 | OP_NOP5
     | OP_NOP6 | OP_NOP7 | OP_NOP8 | OP_NOP9 | OP_NOP10
 
 
@@ -321,7 +321,7 @@ instance Binary ScriptOp where
             -- More NOPs
             | op == 0xb0 = return OP_NOP1
             | op == 0xb1 = return OP_CHECKLOCKTIMEVERIFY
-            | op == 0xb2 = return OP_NOP3
+            | op == 0xb2 = return OP_CHECKSEQUENCEVERIFY
             | op == 0xb3 = return OP_NOP4
             | op == 0xb4 = return OP_NOP5
             | op == 0xb5 = return OP_NOP6
@@ -484,7 +484,7 @@ instance Binary ScriptOp where
         -- More NOPs
         OP_NOP1              -> putWord8 0xb0
         OP_CHECKLOCKTIMEVERIFY              -> putWord8 0xb1
-        OP_NOP3              -> putWord8 0xb2
+        OP_CHECKSEQUENCEVERIFY              -> putWord8 0xb2
         OP_NOP4              -> putWord8 0xb3
         OP_NOP5              -> putWord8 0xb4
         OP_NOP6              -> putWord8 0xb5

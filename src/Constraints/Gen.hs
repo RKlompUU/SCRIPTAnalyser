@@ -322,7 +322,6 @@ stModOp OP_CHECKMULTISIG = do
   pushStack (MultiSig ks_s ks_p) bool
 
 stModOp OP_NOP1 = return ()
-stModOp OP_NOP3 = return ()
 stModOp OP_NOP4 = return ()
 stModOp OP_NOP5 = return ()
 stModOp OP_NOP6 = return ()
@@ -335,7 +334,13 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
   l <- popStack
   let timeCnstr = Op (Var 1) "<" l
   tySet timeCnstr bool
-  tySet l bint
+  tySet l (unsigned bint)
+  addCnstr (C_IsTrue timeCnstr)
+stModOp OP_CHECKSEQUENCEVERIFY = do
+  l <- popStack
+  let timeCnstr = Op (Var 2) "<" l
+  tySet timeCnstr bool
+  tySet l int
   addCnstr (C_IsTrue timeCnstr)
 
 -- DISABLED OP_CODES

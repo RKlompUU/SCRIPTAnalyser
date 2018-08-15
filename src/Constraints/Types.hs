@@ -157,6 +157,10 @@ pkTy :: Ty -- Public key type
 pkTy =
  top { bsRanges = [R.SpanRange 0 100] }
 
+unsigned :: Ty -> Ty
+unsigned t =
+  t { intRanges = R.intersection (intRanges t) [R.LowerBoundRange 0] }
+
 toInt :: Ty -> Ty
 toInt t =
   Ty { intRanges = R.intersection (intRanges t) [R.SpanRange (-maxN) maxN],
@@ -312,7 +316,8 @@ branchReport =
   }
 
 -- Var 1: represents the corresponding transaction's locktime value
-initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32)]
+-- Var 2: delta time between current transaction and the output's original transaction
+initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32),(Var 2,int)]
 
 
 knowledgeBased :: Expr -> Bool

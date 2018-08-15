@@ -94,10 +94,14 @@ addStmt i c = do
 cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) =
   e2Prolog e
+cToProlog (C_TimeReached e) =
+  return ()
 
 esInC :: ValConstraint -> [Expr]
 esInC (C_IsTrue e) =
   EFalse : esInE e
+esInC (C_TimeReached e) =
+  esInE e
 
 opsInE :: Expr -> [Expr]
 opsInE e =

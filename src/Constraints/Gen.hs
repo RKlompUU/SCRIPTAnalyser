@@ -321,6 +321,22 @@ stModOp OP_CHECKMULTISIG = do
   popStack -- Due to a bug in the Bitcoin implementation :)
   pushStack (MultiSig ks_s ks_p) bool
 
+stModOp OP_NOP1 = return ()
+stModOp OP_NOP3 = return ()
+stModOp OP_NOP4 = return ()
+stModOp OP_NOP5 = return ()
+stModOp OP_NOP6 = return ()
+stModOp OP_NOP7 = return ()
+stModOp OP_NOP8 = return ()
+stModOp OP_NOP9 = return ()
+stModOp OP_NOP10 = return ()
+
+stModOp OP_CHECKLOCKTIMEVERIFY = do
+  l <- popStack
+  let timeCnstr = Op (Var 1) "<" l
+  tySet timeCnstr bool
+  addCnstr (C_IsTrue timeCnstr)
+
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op
 

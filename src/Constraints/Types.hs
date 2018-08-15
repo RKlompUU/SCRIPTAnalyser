@@ -234,11 +234,14 @@ tyGet e = do
 
 data ValConstraint where
   C_IsTrue :: Expr -> ValConstraint
+  C_TimeReached :: Expr -> ValConstraint
   deriving (Eq)
 
 instance Show ValConstraint where
   show (C_IsTrue e) =
     "Constraint: " ++ show e
+  show (C_TimeReached e) =
+    "Time lock: " ++ show e
 
 addCnstr :: ValConstraint -> BranchBuilder ()
 addCnstr c = do
@@ -297,7 +300,8 @@ branchReport =
     prologReport = "Not applicable"
   }
 
-initialTypes = M.fromList [(EFalse,false),(ETrue,true)]
+-- Var 1: represents the corresponding transaction's locktime value
+initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,int)]
 
 
 knowledgeBased :: Expr -> Bool

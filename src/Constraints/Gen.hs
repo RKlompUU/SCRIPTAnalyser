@@ -332,8 +332,30 @@ stModOp OP_NOP10 = return ()
 
 stModOp OP_CHECKLOCKTIMEVERIFY = do
   l <- popStack
-  let timeCnstr = Op (Var 1) "<" l
+  let timeCnstrA = Op (Var 1) "<" l
+      timeCnstrB = Op (ConstInt 500000000) "<" l
+      timeCnstrC = Op (ConstInt 500000000) "<" (Var 1)
+      timeCnstrD = Op l "<" (ConstInt 500000000)
+      timeCnstrE = Op (Var 1) "<" (ConstInt 500000000)
+
+      timeCnstrF = Op timeCnstrB "/\\" timeCnstrC
+      timeCnstrG = Op timeCnstrD "/\\" timeCnstrE
+      timeCnstrH = Op timeCnstrF "\\/" timeCnstrG
+
+      timeCnstr  = Op timeCnstrA "/\\" timeCnstrH
+
+
+  tySet (ConstInt 500000000) uint32
   tySet timeCnstr bool
+  tySet timeCnstrA bool
+  tySet timeCnstrB bool
+  tySet timeCnstrC bool
+  tySet timeCnstrD bool
+  tySet timeCnstrE bool
+  tySet timeCnstrF bool
+  tySet timeCnstrG bool
+  tySet timeCnstrH bool
+
   tySet l (unsigned bint)
   addCnstr (C_IsTrue timeCnstr)
 stModOp OP_CHECKSEQUENCEVERIFY = do

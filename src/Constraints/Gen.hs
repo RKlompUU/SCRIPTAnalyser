@@ -30,7 +30,7 @@ genBuildStates script
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
-  tySet e bool
+  --tySet e bool
   addCnstr (C_IsTrue e)
 
 type ConstraintBuilder a = Reader (BranchBuilder ()) a
@@ -332,9 +332,9 @@ stModOp OP_NOP10 = return ()
 
 stModOp OP_CHECKLOCKTIMEVERIFY = do
   l <- popStack
-  let timeCnstrA = Op (Var 1) "<" l
-      timeCnstrB = Op (ConstInt 500000000) "<" l
-      timeCnstrC = Op (ConstInt 500000000) "<" (Var 1)
+  let timeCnstrA = Op l "<" (Var 1)
+      timeCnstrB = Op l ">=" (ConstInt 500000000)
+      timeCnstrC = Op (Var 1) ">=" (ConstInt 500000000)
       timeCnstrD = Op l "<" (ConstInt 500000000)
       timeCnstrE = Op (Var 1) "<" (ConstInt 500000000)
 
@@ -344,8 +344,7 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
 
       timeCnstr  = Op timeCnstrA "/\\" timeCnstrH
 
-
-  tySet (ConstInt 500000000) uint32
+  (uncurry tySet) (annotTy (ConstInt 500000000))
   tySet timeCnstr bool
   tySet timeCnstrA bool
   tySet timeCnstrB bool

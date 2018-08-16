@@ -94,14 +94,10 @@ addStmt i c = do
 cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) =
   e2Prolog e
-cToProlog (C_TimeReached e) =
-  return ()
 
 esInC :: ValConstraint -> [Expr]
 esInC (C_IsTrue e) =
   EFalse : esInE e
-esInC (C_TimeReached e) =
-  esInE e
 
 opsInE :: Expr -> [Expr]
 opsInE e =
@@ -141,8 +137,9 @@ e2Prolog e@(Op e1 op e2)
 --  | any (==op) intOps = do
 --    undefined
 e2Prolog (Op e1 "/\\" e2) = do
-  e2Prolog e1
-  e2Prolog e2
+  withSep " #/\\ " "1" $ do
+    e2Prolog e1
+    e2Prolog e2
 e2Prolog (Op e1 "\\/" e2) = do
   withSep " #\\/ " "0" $ do
     e2Prolog e1

@@ -1,7 +1,37 @@
 :- use_module(library(clpfd)).
 
-
-
+s :-
+(T2bs in 0),
+(T2ints in 0),
+(T4bs in (0)..(520)),
+(T4ints in (-549755813887)..(549755813887)),
+(T13bs in (0)..(1)),
+(T13ints in (0)..(1)),
+(T8bs in (0)..(1)),
+(T8ints in (0)..(1)),
+(T1bs in 4),
+(T1ints in 499999998),
+(T5bs in (0)..(4)),
+(T5ints in (0)..(4294967295)),
+(T15bs in (0)..(1)),
+(T15ints in (0)..(1)),
+(T14bs in (0)..(1)),
+(T14ints in (0)..(1)),
+(T9bs in (0)..(1)),
+(T9ints in (0)..(1)),
+(T0bs in (0)..(4)),
+(T0ints in 500000000),
+(T11bs in (0)..(1)),
+(T11ints in (0)..(1)),
+(T12bs in (0)..(1)),
+(T12ints in (0)..(1)),
+(T7bs in (0)..(1)),
+(T7ints in (0)..(1)),
+(T10bs in (0)..(1)),
+(T10ints in (0)..(1)),
+(T4bs #\= 0),
+((T1ints #< T5ints) #/\ (((T1ints #>= T0ints) #/\ (T5ints #>= T0ints) #/\ 1) #\/ ((T1ints #< T0ints) #/\ (T5ints #< T0ints) #/\ 1) #\/ 0) #/\ 1),
+(#\ 0).
 
 s3 :-
 (T5bs in 0),

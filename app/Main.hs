@@ -40,6 +40,16 @@ printHelp = do
              "\tArg 3 (optional): string to prepend the verdict line (useful to track metadata through large batch computations)"
   exitFailure
 
+readStdin :: IO String
+readStdin = do
+  done <- isEOF
+  if done
+    then return ""
+    else do
+      line <- getLine
+      lines <- readStdin
+      return $ line ++ lines
+
 -- If nonredeemable, exit code = failure
 -- If redeemable or requires prolog to determine this (which is not yet implemented), exit code = success
 main :: IO ()
@@ -60,8 +70,8 @@ main = do
   let dir = fromMaybe "/tmp/" (args !? 1)
   let preVerdict = fromMaybe "" (args !? 2)
 
-  bs <- B.pack <$> getLine
-  let bs' = bs
+  bs <- B.pack <$> readStdin
+  let bs' = B.filter (\c -> not $ any (== c) [' ','\n','\t','\r']) bs
   let script = decode bs'
 
   ast <- E.catch (E.evaluate $ runFillLabels $ buildAST (scriptOps script))

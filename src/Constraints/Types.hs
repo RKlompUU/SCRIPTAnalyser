@@ -256,6 +256,10 @@ data ValConstraint where
   C_Spec   :: Expr -> ValConstraint
   deriving (Eq)
 
+isSpecCnstr :: ValConstraint -> Bool
+isSpecCnstr (C_Spec _) = True
+isSpecCnstr _ = False
+
 instance Show ValConstraint where
   show (C_IsTrue e) =
     "Constraint: " ++ show e

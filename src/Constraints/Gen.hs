@@ -258,7 +258,12 @@ stModOp OP_2ROT = popsStack 6 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 
 
-stModOp OP_SIZE = peakStack >>= \v -> (uncurry pushStack) (annotTy (Length v))
+stModOp OP_SIZE = do
+  v <- peakStack
+  (uncurry pushStack) (annotTy (Length v))
+  let link = Op (Length v) "==" v
+  tySet link bool
+  addCnstr (C_Spec link)
 stModOp OP_NOT = popStack >>= \v -> (uncurry pushStack) (annotTy (Not v))
 {-
 stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))

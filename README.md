@@ -18,12 +18,10 @@ Dependency: swi-prolog (http://www.swi-prolog.org/Download.html)
 
 In the root directory of this repository run:
 
-  \# If not already installed, install Happy:<br/>
-  stack install happy
-  
-  \# Install Script Analyser and all of its dependencies (other than Happy)
-  
-  stack install
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\# If not already installed, install Happy:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stack install happy<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\# Install Script Analyser and all of its dependencies (other than Happy)<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stack install
 
 
 #### Applying the tool

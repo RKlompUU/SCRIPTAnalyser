@@ -359,14 +359,44 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
   addCnstr (C_IsTrue timeCnstr)
 stModOp OP_CHECKSEQUENCEVERIFY = do
   l <- popStack
-  let lMasked = (Op l "&" (Hex "0000FFFFF"))
-      timeCnstr = Op (Var 2) ">=" lMasked
+  let lBit31 = Op l "&" (Hex "80000000")
+      lBit22 = Op l "&" (Hex "00400000")
+      lMasked = Op l "&" (Hex "0000FFFFF")
+
+      lVar3Bit22 = Op (Var 2) "&" (Hex "00400000")
+
+      timeCnstrA = Op (Var 2) ">=" lMasked
+
+      timeCnstrB = Op lVar3Bit22 "/\\" lBit22
+      timeCnstrC = Op (Not $ lVar3Bit22) "/\\" (Not lBit22)
+      timeCnstrD = Op timeCnstrB "\\/" timeCnstrC
+
+      timeCnstrE = Op timeCnstrD "/\\" timeCnstrA
+
+      timeCnstr = Op lBit31 "\\/" timeCnstrE
+
+  tySet timeCnstrA bool
+  tySet timeCnstrB bool
+  tySet timeCnstrC bool
+  tySet timeCnstrD bool
+  tySet timeCnstrE bool
   tySet timeCnstr bool
+
+  tySet (Not $ lBit22) int
+
   tySet l int
+
   tySet lMasked int
+  tySet lBit31 int
+  tySet lBit22 int
   tySet (Hex "0000FFFFF") int
+  tySet (Hex "80000000") int
+  tySet (Hex "00400000") int
+
   addCnstr (C_IsTrue timeCnstr)
   addCnstr (C_Spec lMasked)
+  addCnstr (C_Spec lBit31)
+  addCnstr (C_Spec lBit22)
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op

@@ -275,8 +275,8 @@ failBranch = throwError
 unwrapBuildMonad :: BranchBuilder a -> BranchReport
 unwrapBuildMonad b =
   case flip runState (initBuildState) $ runExceptT b of
-    (Left e,st)    -> branchReport { symbolicEval = st, symbolicErrs = Just e }
-    (Right _,st) -> branchReport { symbolicEval = st, symbolicErrs = Nothing }
+    (Left e,st)    -> branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Just e }
+    (Right _,st) -> branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Nothing }
 
 type Stack = [Expr]
 data BuildState =
@@ -321,8 +321,8 @@ branchReport =
 
 -- Var 1: represents the corresponding transaction's locktime value
 -- Var 2: delta time between current transaction and the output's original transaction
-initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32),(Var 2,int {intRanges = [R.SingletonRange 400]})]--(Var 2,int)]
-
+initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32),(Var 2,int {intRanges = [R.SingletonRange 400]}),(Op (Var 2) "&" (Hex "00400000"),int),(Hex "00400000",int),(Not (Op (Var 2) "&" (Hex "00400000")),bool)]--(Var 2,int)]
+postCnstrs = [C_Spec (Op (Var 2) "&" (Hex "00400000"))]
 
 knowledgeBased :: Expr -> Bool
 knowledgeBased e =

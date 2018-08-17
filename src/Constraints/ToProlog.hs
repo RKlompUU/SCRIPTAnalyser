@@ -139,7 +139,10 @@ e2Prolog e
       else contradiction
 e2Prolog e@(Var x) = do
   t <- askTy e
-  plFact $ tyBSPL t ++ " #\\= 0"
+  plFact $ tyIPL t ++ " #\\= 0"
+e2Prolog e@(Op e1 "&" e2) = do
+  t <- askTy e
+  plFact $ tyIPL t ++ " #\\= 0"
 e2Prolog e@(Op e1 op e2)
   | any (==op) cmpOps = do
     relateTys e1 op e2
@@ -170,11 +173,14 @@ e2Prolog (Not e)
       else contradiction
 e2Prolog (Not e@(Var x)) = do
   t <- askTy e
-  plFact $ tyBSPL t ++ " #= 0"
+  plFact $ tyIPL t ++ " #= 0"
 e2Prolog (Not (Op e1 op e2))
   | isJust flippedOp =
     relateTys e1 (fromJust flippedOp) e2
   where flippedOp = lookup op flipOps
+e2Prolog (Not e@(Op e1 "&" e2)) = do
+  t <- askTy e
+  plFact $ tyIPL t ++ " #= 0"
 e2Prolog (Not (Op e1 "/\\" e2)) =
   e2Prolog (Op (Not e1) "\\/" (Not e2))
 e2Prolog (Op e1 "\\/" e2) =

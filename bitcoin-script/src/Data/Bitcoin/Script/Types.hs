@@ -74,6 +74,7 @@ data PushDataType
 data ScriptOp
       -- Pushing Data
     = OP_PUSHDATA BS.ByteString PushDataType
+    | BigInt ScriptOp
     | OP_0
     | OP_1NEGATE
     | OP_RESERVED

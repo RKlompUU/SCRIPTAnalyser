@@ -15,6 +15,7 @@ import Script.AST
   else  { OP_ELSE }
   fi    { OP_ENDIF }
   ifdup { OP_IFDUP }
+  seqver { OP_CHECKSEQUENCEVERIFY }
   op    { $$ }
 
 %%
@@ -28,6 +29,7 @@ stmnts : if stmnts else stmnts fi stmnts { ScriptITE 0 $2 0 $4 0 $6 }
        | ifdup stmnts { ScriptOp 0 OP_DUP $ ScriptITE 0 (ScriptOp 0 OP_DUP ScriptTail) 0
                                                         (ScriptOp 0 OP_DROP ScriptTail) 0
                                                         $2 }
+       | op seqver stmnts { ScriptOp 0 (BigInt $1) (ScriptOp 0 $2 $3)}
        | op stmnts { ScriptOp 0 $1 $2 }
        | { ScriptTail }
 

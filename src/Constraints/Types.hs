@@ -97,6 +97,14 @@ atom2Bool (ConstBS bs) =
     Just (ConstInt 0) -> False
     _      -> True
 
+atom2BInt :: Expr -> Int
+atom2BInt ETrue = 1
+atom2BInt EFalse = 0
+atom2BInt (ConstInt i) = i
+atom2BInt (ConstBS bs) =
+  case convert2BInt (ConstBS bs) of
+    Just (ConstInt i) -> i
+    _      -> 0
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
 lazy2StrictBS =
@@ -107,6 +115,12 @@ convert2Int (ConstInt i) = Just $ ConstInt i
 convert2Int (ConstBS bs)
   | BS.length bs <= 4 = ConstInt <$> return (fromIntegral $ asInteger bs)
 convert2Int _ = Nothing
+
+convert2BInt :: Expr -> Maybe Expr
+convert2BInt (ConstInt i) = Just $ ConstInt i
+convert2BInt (ConstBS bs)
+  | BS.length bs <= 5 = ConstInt <$> return (fromIntegral $ asBigInteger bs)
+convert2BInt _ = Nothing
 
 tryConvert2Int :: Expr -> Expr
 tryConvert2Int e

@@ -14,6 +14,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe
+import qualified Data.Range.Range as R
 
 import Bitcoin.Script.Integer
 import Constraints.Types
@@ -357,11 +358,17 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
 
   tySet l (unsigned bint)
   addCnstr (C_IsTrue timeCnstr)
+{-
+stModOp (BigInt (OP_PUSHDATA bs _))
+  | B.length bs <= 5 = do
+    let v =
+    pushStack (ConstInt v) (bint {intRanges = [R.SingletonRange v], bsRanges = [R.SingletonRange (B.length bs)]}
+-}
 stModOp OP_CHECKSEQUENCEVERIFY = do
   l <- popStack
   let lBit31 = Op l "&" (Hex "80000000")
       lBit22 = Op l "&" (Hex "00400000")
-      lMasked = Op l "&" (Hex "0000FFFFF")
+      lMasked = Op l "&" (Hex "0000FFFF")
 
       lVar3Bit22 = Op (Var 2) "&" (Hex "00400000")
 
@@ -384,12 +391,12 @@ stModOp OP_CHECKSEQUENCEVERIFY = do
 
   tySet (Not $ lBit22) int
 
-  tySet l int
+  tySet l bint
 
   tySet lMasked int
   tySet lBit31 int
   tySet lBit22 int
-  tySet (Hex "0000FFFFF") int
+  tySet (Hex "0000FFFF") int
   tySet (Hex "80000000") int
   tySet (Hex "00400000") int
 

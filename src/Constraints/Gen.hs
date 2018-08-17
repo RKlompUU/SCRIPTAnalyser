@@ -359,10 +359,14 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
   addCnstr (C_IsTrue timeCnstr)
 stModOp OP_CHECKSEQUENCEVERIFY = do
   l <- popStack
-  let timeCnstr = Op (Var 2) "<" l
+  let lMasked = (Op l "&" (Hex "0000FFFFF"))
+      timeCnstr = Op (Var 2) ">=" lMasked
   tySet timeCnstr bool
   tySet l int
+  tySet lMasked int
+  tySet (Hex "0000FFFFF") int
   addCnstr (C_IsTrue timeCnstr)
+  addCnstr (C_Spec lMasked)
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op

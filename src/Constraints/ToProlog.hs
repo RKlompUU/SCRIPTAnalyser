@@ -94,10 +94,14 @@ addStmt i c = do
 cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) =
   e2Prolog e
+cToProlog (C_Spec e) =
+  spec2Prolog e
 
 esInC :: ValConstraint -> [Expr]
 esInC (C_IsTrue e) =
   EFalse : esInE e
+esInC (C_Spec e) =
+  esInE e
 
 opsInE :: Expr -> [Expr]
 opsInE e =
@@ -120,6 +124,12 @@ esInE e = [e]
 
 contradiction :: PrologWriter ()
 contradiction = plFact "false"
+
+spec2Prolog :: Expr -> PrologWriter ()
+spec2Prolog e@(Op e1 "&" e2) = do
+  t1 <- askTy e1
+  t  <- askTy e
+  plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " /\\ " ++ show e2 ++ ")"
 
 e2Prolog :: Expr -> PrologWriter ()
 e2Prolog e

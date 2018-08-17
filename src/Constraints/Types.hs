@@ -26,6 +26,8 @@ data Expr where
   ConstInt :: Int -> Expr
   ConstBS  :: BS.ByteString -> Expr
 
+  Hex :: String -> Expr
+
   EFalse   :: Expr
   ETrue    :: Expr
   Not :: Expr -> Expr
@@ -45,6 +47,8 @@ instance Show Expr where
     "Int " ++ show i
   show (ConstBS bs) =
     "BS_" ++ show (BS.length bs) ++ " " ++ printBSInHex bs
+  show (Hex h) =
+    "0x" ++ h
   show EFalse =
     "False"
   show ETrue =
@@ -249,11 +253,14 @@ tyGet e = do
 
 data ValConstraint where
   C_IsTrue :: Expr -> ValConstraint
+  C_Spec   :: Expr -> ValConstraint
   deriving (Eq)
 
 instance Show ValConstraint where
   show (C_IsTrue e) =
     "Constraint: " ++ show e
+  show (C_Spec e) =
+    "Specified value: " ++ show e
 
 addCnstr :: ValConstraint -> BranchBuilder ()
 addCnstr c = do
@@ -314,7 +321,7 @@ branchReport =
 
 -- Var 1: represents the corresponding transaction's locktime value
 -- Var 2: delta time between current transaction and the output's original transaction
-initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32),(Var 2,int)]
+initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32),(Var 2,int {intRanges = [R.SingletonRange 400]})]--(Var 2,int)]
 
 
 knowledgeBased :: Expr -> Bool

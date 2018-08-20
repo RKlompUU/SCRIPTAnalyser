@@ -40,6 +40,17 @@ printHelp = do
              "\tArg 3 (optional): string to prepend the verdict line (useful to track metadata through large batch computations)"
   exitFailure
 
+stripComments :: B.ByteString -> B.ByteString
+stripComments bs = B.reverse . snd
+                 $ B.foldl walker (False,B.empty) bs
+  where walker :: (Bool, B.ByteString) -> Char -> (Bool, B.ByteString)
+        walker (False, bs') '#' = (True, bs')
+        walker (False, bs') c   = (False, B.cons c bs')
+        walker (True, bs') '\n' = (False, bs')
+        walker (True, bs') _    = (True, bs')
+
+
+
 readStdin :: IO String
 readStdin = do
   done <- isEOF
@@ -48,7 +59,7 @@ readStdin = do
     else do
       line <- getLine
       lines <- readStdin
-      return $ line ++ lines
+      return $ line ++ ('\n' : lines)
 
 -- If nonredeemable, exit code = failure
 -- If redeemable or requires prolog to determine this (which is not yet implemented), exit code = success
@@ -71,7 +82,9 @@ main = do
   let preVerdict = fromMaybe "" (args !? 2)
 
   bs <- B.pack <$> readStdin
-  let bs' = B.filter (\c -> not $ any (== c) [' ','\n','\t','\r']) bs
+  putStrLn $ show bs
+  let bs' = B.filter (\c -> not $ any (== c) [' ','\n','\t','\r'])
+          $ stripComments bs
   let script = decode bs'
 
   ast <- E.catch (E.evaluate $ runFillLabels $ buildAST (scriptOps script))

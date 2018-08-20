@@ -204,6 +204,11 @@ true =
   Ty { intRanges = R.difference (intRanges top) (intRanges false),
        bsRanges  = R.difference (bsRanges top) (bsRanges false) }
 
+genTrue :: Ty
+genTrue =
+   Ty { intRanges = [R.SingletonRange 1],
+        bsRanges  = [R.SingletonRange 1] }
+
 annotTy :: Expr -> (Expr,Ty)
 annotTy e@(ConstBS bs)
   | BS.length bs <= maxIntBSL
@@ -213,14 +218,17 @@ annotTy e@(ConstBS bs)
   = (e, Ty { intRanges = [],
              bsRanges = [R.SingletonRange (BS.length bs)] } )
 annotTy e@(ConstInt i) =
-  (e, int { intRanges = [R.SingletonRange i] })
+  (e, int { intRanges = [R.SingletonRange i],
+            bsRanges = [R.SingletonRange (BS.length (asByteString (fromIntegral i)))] })
 annotTy e@(BigInt e_)
-  | isAtom e_ = let bs = atom2BS e_
-                in (e, if BS.length bs <= 5
+  | isAtom e_ &&
+    BS.length bs <= 5 = (e, if BS.length bs <= 5
                         then bint { intRanges = [R.SingletonRange (fromIntegral $ asInteger bs)],
                                     bsRanges = [R.SingletonRange (BS.length bs)] }
                         else bot)
-  | otherwise = (e, bint)
+  | isAtom e_ = (e, bint)
+  | otherwise = error $ "annotTy: BigInt parameter has more than maximum allowed bytestring length"
+  where bs = atom2BS e_
 annotTy e@(Hash _ l) =
   (e, Ty { intRanges = [], bsRanges = [R.SingletonRange l] } )
 annotTy e@(Length _) =

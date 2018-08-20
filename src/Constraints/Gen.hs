@@ -150,9 +150,9 @@ genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
                       noteBranchJump ifLbl b
                       if b
                         then addCnstr (C_IsTrue v) >>
-                             tySet v true
+                             tySet v genTrue
                         else addCnstr (C_IsTrue $ Not v) >>
-                             tySet (Not v) true
+                             tySet (Not v) genTrue
                  )
   ss0 <- branched stModITE True b0
   ss1 <- branched stModITE False b1

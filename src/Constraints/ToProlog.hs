@@ -92,8 +92,11 @@ addStmt i c = do
   --tell "true.\n"
 
 cToProlog :: ValConstraint -> PrologWriter ()
-cToProlog (C_IsTrue e) =
+cToProlog (C_IsTrue e) = do
   e2Prolog e
+
+  t <- askTy e
+  plFact $ tyIPL t ++ " #\\= 0"
 cToProlog (C_Spec e) =
   spec2Prolog e
 
@@ -139,67 +142,43 @@ spec2Prolog (Op e1@(Length _) "==" e2) = do
   t2 <- askTy e2
   plFact $ tyIPL t1 ++ " #= " ++ tyBSPL t2
 
-e2Prolog :: Expr -> PrologWriter ()
-e2Prolog e
-  | isAtom e =
-    if atom2Bool e
-      then return ()
-      else contradiction
-
-e2Prolog e@(Var x) = do
-  t <- askTy e
-  plFact $ tyIPL t ++ " #\\= 0"
-e2Prolog e@(Op e1 "&" e2) = do
-  t <- askTy e
-  plFact $ tyIPL t ++ " #\\= 0"
 e2Prolog (Op e1 op e2)
   | any (==op) cmpOps = do
+    e2Prolog e1
+    e2Prolog e2
+
     relateTys e1 op e2
 e2Prolog e@(Op e1 op e2)
   | any (==op) numOps = do
     t  <- askTy e
     t1 <- askTy e1
     t2 <- askTy e2
-    plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " " ++ op ++ " " ++ tyIPL t2 ++ ")"
-    plFact $ tyIPL t ++ " #\\= 0"
-e2Prolog (Op e1 "/\\" e2) = do
-  withSep " #/\\ " "1" $ do
-    e2Prolog e1
-    e2Prolog e2
-e2Prolog (Op e1 "\\/" e2) = do
-  withSep " #\\/ " "0" $ do
-    e2Prolog e1
-    e2Prolog e2
-e2Prolog (Sig _ _) =
-  return () -- plFact "1 #\\/ 0"
-e2Prolog (MultiSig _ _) =
-  return () -- plFact "1"
-e2Prolog (Hash _ _) =
-  return ()
 
-e2Prolog (Not (Not e)) =
-  e2Prolog e
-e2Prolog (Not e)
-  | any (ccEq e) atomEs =
-    if not $ atom2Bool e
-      then return ()
-      else contradiction
-e2Prolog (Not e@(Var x)) = do
+    e2Prolog e1
+    e2Prolog e2
+
+    plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " " ++ op ++ " " ++ tyIPL t2 ++ ")"
+e2Prolog e@(Op e1 op e2)
+  | op == "/\\" ||
+    op == "\\/" = do
+  t  <- askTy e
+  t1 <- askTy e1
+  t2 <- askTy e2
+
+  e2Prolog e1
+  e2Prolog e2
+
+  plFact $ tyIPL t1 ++ " #" ++ op ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
+  plFact $ "#\\ " ++ tyIPL t1 ++ " #" ++ op ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+e2Prolog e@(Not e') = do
   t <- askTy e
-  plFact $ tyIPL t ++ " #= 0"
-e2Prolog (Not (Op e1 op e2))
-  | isJust flippedOp =
-    relateTys e1 (fromJust flippedOp) e2
-  where flippedOp = lookup op flipOps
-e2Prolog (Not e@(Op e1 "&" e2)) = do
-  t <- askTy e
-  plFact $ tyIPL t ++ " #= 0"
-e2Prolog (Not (Op e1 "/\\" e2)) =
-  e2Prolog (Op (Not e1) "\\/" (Not e2))
-e2Prolog (Op e1 "\\/" e2) =
-  e2Prolog (Op (Not e1) "/\\" (Not e2))
-e2Prolog e =
-  throwError $ "e2Prolog not (yet) implemented for " ++ show e
+  t' <- askTy e'
+
+  e2Prolog e'
+
+  plFact $ "#\\ " ++ tyIPL t' ++ " #= 0 #==> " ++ tyIPL t ++ " #= 0"
+  plFact $ tyIPL t' ++ " #= 0 #==> " ++ tyIPL t ++ " #= 1"
+e2Prolog _ = return ()
 
 flipOps :: [(OpIdent,OpIdent)]
 flipOps =

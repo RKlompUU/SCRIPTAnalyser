@@ -142,34 +142,45 @@ spec2Prolog (Op e1@(Length _) "==" e2) = do
   t2 <- askTy e2
   plFact $ tyIPL t1 ++ " #= " ++ tyBSPL t2
 
-e2Prolog (Op e1 op e2)
-  | any (==op) cmpOps = do
-    e2Prolog e1
-    e2Prolog e2
-
-    relateTys e1 op e2
 e2Prolog e@(Op e1 op e2)
   | any (==op) numOps = do
-    t  <- askTy e
-    t1 <- askTy e1
-    t2 <- askTy e2
+      t  <- askTy e
+      t1 <- askTy e1
+      t2 <- askTy e2
 
-    e2Prolog e1
-    e2Prolog e2
+      e2Prolog e1
+      e2Prolog e2
 
-    plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " " ++ op ++ " " ++ tyIPL t2 ++ ")"
+      plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " " ++ op ++ " " ++ tyIPL t2 ++ ")"
 e2Prolog e@(Op e1 op e2)
-  | op == "/\\" ||
-    op == "\\/" = do
-  t  <- askTy e
+  | isJust op' = do
+      t  <- askTy e
+      t1 <- askTy e1
+      t2 <- askTy e2
+
+      e2Prolog e1
+      e2Prolog e2
+
+      plFact $ tyIPL t1 ++ " " ++ fromJust op' ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
+      plFact $ "#\\ " ++ tyIPL t1 ++ " " ++ fromJust op' ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+  where op' = lookup op [("/\\","#/\\"),
+                         ("\\/","#\\/"),
+                         (">","#>"),
+                         ("<","#<"),
+                         (">=","#>="),
+                         ("<=","#=<")]
+e2Prolog e@(Op e1 "==" e2) = do
+  t <- askTy e
   t1 <- askTy e1
   t2 <- askTy e2
 
-  e2Prolog e1
-  e2Prolog e2
+  plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
+  plFact $ "#\\ " ++ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
 
-  plFact $ tyIPL t1 ++ " #" ++ op ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
-  plFact $ "#\\ " ++ tyIPL t1 ++ " #" ++ op ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+  when (hasInts (snd t1) && hasInts (snd t2)) $ do
+    plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
+    plFact $ "#\\ " ++ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+
 e2Prolog e@(Not e') = do
   t <- askTy e
   t' <- askTy e'

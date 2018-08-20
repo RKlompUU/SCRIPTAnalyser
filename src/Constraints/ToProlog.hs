@@ -170,18 +170,18 @@ e2Prolog e@(Op e1 "==" e2) = do
   t2 <- askTy e2
 
   plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
-  plFact $ "#\\ (" ++ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ ") #==> " ++ tyIPL t ++ " #= 0"
+  plFact $ tyBSPL t1 ++ " #\\= " ++ tyBSPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
 
   when (hasInts (snd t1) && hasInts (snd t2)) $ do
     plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
-    plFact $ "#\\ (" ++ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ ") #==> " ++ tyIPL t ++ " #= 0"
+    plFact $ tyIPL t1 ++ " #\\= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
 e2Prolog e@(Not e') = do
   t <- askTy e
   t' <- askTy e'
 
   e2Prolog e'
 
-  plFact $ "#\\ (" ++ tyIPL t' ++ " #= 0) #==> " ++ tyIPL t ++ " #= 0"
+  plFact $ tyIPL t' ++ " #\\= 0 #==> " ++ tyIPL t ++ " #= 0"
   plFact $ tyIPL t' ++ " #= 0 #==> " ++ tyIPL t ++ " #= 1"
 e2Prolog _ = return ()
 

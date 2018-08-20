@@ -221,14 +221,12 @@ annotTy e@(ConstInt i) =
   (e, int { intRanges = [R.SingletonRange i],
             bsRanges = [R.SingletonRange (BS.length (asByteString (fromIntegral i)))] })
 annotTy e@(BigInt e_)
-  | isAtom e_ &&
-    BS.length bs <= 5 = (e, if BS.length bs <= 5
-                        then bint { intRanges = [R.SingletonRange (fromIntegral $ asInteger bs)],
-                                    bsRanges = [R.SingletonRange (BS.length bs)] }
-                        else bot)
-  | isAtom e_ = (e, bint)
-  | otherwise = error $ "annotTy: BigInt parameter has more than maximum allowed bytestring length"
-  where bs = atom2BS e_
+  | isAtom e_ = let bs = atom2BS e_
+                in (e, if BS.length bs <= 5
+                          then bint { intRanges = [R.SingletonRange (fromIntegral $ asInteger bs)],
+                                      bsRanges = [R.SingletonRange (BS.length bs)] }
+                          else bot)
+  | otherwise = (e, bint)
 annotTy e@(Hash _ l) =
   (e, Ty { intRanges = [], bsRanges = [R.SingletonRange l] } )
 annotTy e@(Length _) =

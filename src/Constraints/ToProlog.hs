@@ -145,18 +145,23 @@ e2Prolog e
     if atom2Bool e
       then return ()
       else contradiction
+
 e2Prolog e@(Var x) = do
   t <- askTy e
   plFact $ tyIPL t ++ " #\\= 0"
 e2Prolog e@(Op e1 "&" e2) = do
   t <- askTy e
   plFact $ tyIPL t ++ " #\\= 0"
-e2Prolog e@(Op e1 op e2)
+e2Prolog (Op e1 op e2)
   | any (==op) cmpOps = do
     relateTys e1 op e2
---e2Prolog (Op e1 op e2)
---  | any (==op) intOps = do
---    undefined
+e2Prolog e@(Op e1 op e2)
+  | any (==op) numOps = do
+    t  <- askTy e
+    t1 <- askTy e1
+    t2 <- askTy e2
+    plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " " ++ op ++ " " ++ tyIPL t2 ++ ")"
+    plFact $ tyIPL t ++ " #\\= 0"
 e2Prolog (Op e1 "/\\" e2) = do
   withSep " #/\\ " "1" $ do
     e2Prolog e1

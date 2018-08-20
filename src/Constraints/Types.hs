@@ -241,6 +241,8 @@ cmpOps =
   ["==","/=","<=","<",">=",">"]
 boolOps =
   ["/\\","\\/"]
+numOps =
+  ["+","-"]
 
 opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
 opTys "<"   = return $ (toInt,toInt,bool)

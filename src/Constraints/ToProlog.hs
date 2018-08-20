@@ -130,6 +130,10 @@ spec2Prolog e@(Op e1 "&" e2) = do
   t1 <- askTy e1
   t  <- askTy e
   plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " /\\ " ++ show e2 ++ ")"
+spec2Prolog (Op (Length e1) "==" (Length e2)) = do
+  t1 <- askTy e1
+  t2 <- askTy e2
+  plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2
 spec2Prolog (Op e1@(Length _) "==" e2) = do
   t1 <- askTy e1
   t2 <- askTy e2
@@ -137,7 +141,7 @@ spec2Prolog (Op e1@(Length _) "==" e2) = do
 
 e2Prolog :: Expr -> PrologWriter ()
 e2Prolog e
-  | any (ccEq e) atomEs =
+  | isAtom e =
     if atom2Bool e
       then return ()
       else contradiction

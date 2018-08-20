@@ -38,6 +38,8 @@ data Expr where
   Sig  :: Expr -> Expr -> Expr
   MultiSig :: [Expr] -> [Expr] -> Expr
 
+  BigInt :: Expr -> Expr
+
   Var   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Eq,Ord,T.Typeable,TD.Data)
@@ -47,6 +49,8 @@ instance Show Expr where
     "Int " ++ show i
   show (ConstBS bs) =
     "BS_" ++ show (BS.length bs) ++ " " ++ printBSInHex bs
+  show (BigInt e) =
+    "BigInt(" ++ show e ++ ")"
   show (Hex h) =
     "0x" ++ h
   show EFalse =
@@ -85,6 +89,10 @@ atomEs =
    TD.toConstr $ ConstBS undefined
    ]
 
+isAtom :: Expr -> Bool
+isAtom e =
+  any (ccEq e) atomEs
+
 atom2Bool :: Expr -> Bool
 atom2Bool ETrue =
   True
@@ -96,6 +104,12 @@ atom2Bool (ConstBS bs) =
   case convert2Int (ConstBS bs) of
     Just (ConstInt 0) -> False
     _      -> True
+
+atom2BS :: Expr -> BS.ByteString
+atom2BS ETrue = BS.pack [0x01]
+atom2BS EFalse = BS.empty
+atom2BS (ConstInt i) = asByteString (fromIntegral i)
+atom2BS (ConstBS bs) = bs
 
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
@@ -161,6 +175,10 @@ pkTy :: Ty -- Public key type
 pkTy =
  top { bsRanges = [R.SpanRange 0 100] }
 
+bot :: Ty
+bot =
+  top { intRanges = [], bsRanges = [] }
+
 unsigned :: Ty -> Ty
 unsigned t =
   t { intRanges = R.intersection (intRanges t) [R.LowerBoundRange 0] }
@@ -196,6 +214,13 @@ annotTy e@(ConstBS bs)
              bsRanges = [R.SingletonRange (BS.length bs)] } )
 annotTy e@(ConstInt i) =
   (e, int { intRanges = [R.SingletonRange i] })
+annotTy e@(BigInt e_)
+  | isAtom e_ = let bs = atom2BS e_
+                in (e, if BS.length bs <= 5
+                        then bint { intRanges = [R.SingletonRange (fromIntegral $ asInteger bs)],
+                                    bsRanges = [R.SingletonRange (BS.length bs)] }
+                        else bot)
+  | otherwise = (e, bint)
 annotTy e@(Hash _ l) =
   (e, Ty { intRanges = [], bsRanges = [R.SingletonRange l] } )
 annotTy e@(Length _) =
@@ -323,10 +348,22 @@ branchReport =
     prologReport = "Not applicable"
   }
 
+txSeqNum = 4194549
+
 -- Var 1: represents the corresponding transaction's locktime value
 -- Var 2: delta time between current transaction and the output's original transaction
-initialTypes = M.fromList [(EFalse,false),(ETrue,true),(Var 1,uint32),(Var 2,int {intRanges = [R.SingletonRange 400]}),(Op (Var 2) "&" (Hex "00400000"),int),(Hex "00400000",int),(Not (Op (Var 2) "&" (Hex "00400000")),bool)]--(Var 2,int)]
-postCnstrs = [C_Spec (Op (Var 2) "&" (Hex "00400000"))]
+initialTypes = M.fromList [(EFalse,false),
+                           (ETrue,true),
+                           (Var 1,uint32),
+                           (Var 2,int {intRanges = [R.SingletonRange txSeqNum]}),
+                           --(Var 2,int),
+                           (Op (Var 2) "&" (Hex "0000FFFF"),int),
+                           (Op (Var 2) "&" (Hex "00400000"),int),
+                           (Hex "00400000",int),
+                           (Hex "0000FFFF",int),
+                           (Not (Op (Var 2) "&" (Hex "00400000")),bool)]--(Var 2,int)]
+postCnstrs = [C_Spec (Op (Var 2) "&" (Hex "00400000")),
+              C_Spec (Op (Var 2) "&" (Hex "0000FFFF"))]
 
 knowledgeBased :: Expr -> Bool
 knowledgeBased e =

@@ -364,13 +364,32 @@ stModOp OP_CHECKLOCKTIMEVERIFY = do
   addCnstr (C_IsTrue timeCnstr)
 stModOp OP_CHECKSEQUENCEVERIFY = do
   l <- popStack
-  let lBit31 = Op l "&" (Hex "80000000")
-      lBit22 = Op l "&" (Hex "00400000")
-      lMasked = Op l "&" (Hex "0000FFFFF")
+  tySet l bint
+
+  let l' = BigInt l
+  (uncurry tySet) (annotTy l')
+
+  let linkA = Length l
+      linkB = Length l'
+  let link = Op linkA "==" linkB
+  tySet linkA int
+  tySet linkB int
+  tySet link bool
+  addCnstr (C_Spec link)
+
+  let cnstrMin0 = Op l' ">=" (ConstInt 0)
+  tySet cnstrMin0 bool
+  tySet (ConstInt 0) bint
+  addCnstr (C_IsTrue cnstrMin0)
+
+  let lBit31 = Op l' "&" (Hex "80000000")
+      lBit22 = Op l' "&" (Hex "00400000")
+      lMasked = Op l' "&" (Hex "0000FFFF")
 
       lVar3Bit22 = Op (Var 2) "&" (Hex "00400000")
+      lVar3Masked = Op (Var 2) "&" (Hex "0000FFFF")
 
-      timeCnstrA = Op (Var 2) ">=" lMasked
+      timeCnstrA = Op lVar3Masked ">=" lMasked
 
       timeCnstrB = Op lVar3Bit22 "/\\" lBit22
       timeCnstrC = Op (Not $ lVar3Bit22) "/\\" (Not lBit22)
@@ -387,14 +406,12 @@ stModOp OP_CHECKSEQUENCEVERIFY = do
   tySet timeCnstrE bool
   tySet timeCnstr bool
 
-  tySet (Not $ lBit22) int
-
-  tySet l int
+  tySet (Not $ lBit22) bool
 
   tySet lMasked int
-  tySet lBit31 int
+  tySet lBit31 bint
   tySet lBit22 int
-  tySet (Hex "0000FFFFF") int
+  tySet (Hex "0000FFFF") int
   tySet (Hex "80000000") int
   tySet (Hex "00400000") int
 

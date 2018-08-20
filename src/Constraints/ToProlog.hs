@@ -106,15 +106,6 @@ esInC (C_IsTrue e) =
 esInC (C_Spec e) =
   esInE e
 
-opsInE :: Expr -> [Expr]
-opsInE e =
-  filter (eqExprKind (Op undefined undefined undefined))
-  $ esInE e
-
-eqExprKind :: Expr -> Expr -> Bool
-eqExprKind (Op _ _ _) (Op _ _ _) = True
-eqExprKind _ _ = False -- Either not implemented or actually false
-
 esInE :: Expr -> [Expr]
 esInE e@(Op e1 _ e2) = e : esInE e1 ++ esInE e2
 esInE e@(Sig e1 e2) = e : esInE e1 ++ esInE e2
@@ -122,8 +113,8 @@ esInE e@(MultiSig es1 es2) = e : (concat $ map esInE es1 ++ map esInE es2)
 esInE e@(Hash e1 _) = e : esInE e1
 esInE e@(Length e1) = e : esInE e1
 esInE e@(Not e1) = e : esInE e1
+esInE e@(BigInt e') = e : esInE e'
 esInE e = [e]
-
 
 contradiction :: PrologWriter ()
 contradiction = plFact "false"
@@ -191,47 +182,9 @@ e2Prolog e@(Not e') = do
   plFact $ tyIPL t' ++ " #= 0 #==> " ++ tyIPL t ++ " #= 1"
 e2Prolog _ = return ()
 
-flipOps :: [(OpIdent,OpIdent)]
-flipOps =
-  [("<", ">="),
-   (">=", "<"),
-   (">", "<="),
-   ("<=", ">"),
-   ("==", "/="),
-   ("/=", "==")]
-boolFDOps :: [(OpIdent,String)]
-boolFDOps =
-  [("\\/", " #\\/ "),
-   ("/\\", " #/\\ ")]
-
-relateTys :: Expr -> OpIdent -> Expr -> PrologWriter ()
-relateTys e1 op e2 = do
-  t1 <- askTy e1
-  t2 <- askTy e2
-  relateTys' t1 op t2
-
 hasInts :: Ty -> Bool
 hasInts t =
   not $ null $ intRanges $ t
-
-relateTys' :: (Ident,Ty) -> OpIdent -> (Ident,Ty) -> PrologWriter ()
-relateTys' t1 "==" t2 = do
-  plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2
-  when (hasInts (snd t1) && hasInts (snd t2)) $
-    plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2
-relateTys' t1 "/=" t2 = do
-  when (hasInts (snd t1) && hasInts (snd t2)) $
-    plFact $ tyIPL t1 ++ " #\\= " ++ tyIPL t2
-relateTys' t1 "<=" t2= do
-  plFact $ tyIPL t1 ++ " #=< " ++ tyIPL t2
-relateTys' t1 "<" t2 = do
-  plFact $ tyIPL t1 ++ " #< " ++ tyIPL t2
-relateTys' t1 ">=" t2= do
-  plFact $ tyIPL t1 ++ " #>= " ++ tyIPL t2
-relateTys' t1 ">" t2 = do
-  plFact $ tyIPL t1 ++ " #> " ++ tyIPL t2
-relateTys' _ op _ =
-  throwError $ "relateTys' not (yet) implemented for op relation: " ++ show op
 
 tyBSPL :: (Ident,Ty) -> PL
 tyBSPL (i,_) = "T" ++ show i ++ "bs"

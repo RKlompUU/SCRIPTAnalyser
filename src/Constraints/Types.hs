@@ -259,8 +259,8 @@ opTys "<="  = return $ (toInt,toInt,bool)
 opTys ">="  = return $ (toInt,toInt,bool)
 opTys "/\\" = return $ (toInt,toInt,bool)
 opTys "\\/" = return $ (toInt,toInt,bool)
-opTys "+"   = return $ (toInt,toInt,int) -- Or maybe not.. because of overflow
-opTys "-"   = return $ (toInt,toInt,int) -- Or maybe not.. because of overflow
+opTys "+"   = return $ (toInt,toInt,bint) -- bint because of possible over/underflow
+opTys "-"   = return $ (toInt,toInt,bint) -- bint because of possible over/underflow
 
 tySet :: Expr -> Ty -> BranchBuilder ()
 tySet e t' = do

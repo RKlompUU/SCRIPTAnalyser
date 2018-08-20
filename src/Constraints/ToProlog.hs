@@ -171,7 +171,6 @@ e2Prolog e@(Op e1 "==" e2) = do
   when (hasInts (snd t1) && hasInts (snd t2)) $ do
     plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
     plFact $ "#\\ " ++ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
-
 e2Prolog e@(Not e') = do
   t <- askTy e
   t' <- askTy e'

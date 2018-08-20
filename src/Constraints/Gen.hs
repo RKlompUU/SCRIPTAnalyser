@@ -379,25 +379,29 @@ stModOp OP_CHECKSEQUENCEVERIFY = do
 
   let cnstrMin0 = Op l' ">=" (ConstInt 0)
   tySet cnstrMin0 bool
-  tySet (ConstInt 0) bint
+  (uncurry tySet) $ annotTy (ConstInt 0)
   addCnstr (C_IsTrue cnstrMin0)
 
   let lBit31 = Op l' "&" (Hex "80000000")
+      lBit31_ = Op lBit31 ">>" (ConstInt 31)
       lBit22 = Op l' "&" (Hex "00400000")
+      lBit22_ = Op lBit22 ">>" (ConstInt 22)
       lMasked = Op l' "&" (Hex "0000FFFF")
 
       lVar3Bit22 = Op (Var 2) "&" (Hex "00400000")
+      lVar3Bit22_ = Op lVar3Bit22 ">>" (ConstInt 22)
+
       lVar3Masked = Op (Var 2) "&" (Hex "0000FFFF")
 
       timeCnstrA = Op lVar3Masked ">=" lMasked
 
-      timeCnstrB = Op lVar3Bit22 "/\\" lBit22
-      timeCnstrC = Op (Not $ lVar3Bit22) "/\\" (Not lBit22)
+      timeCnstrB = Op lVar3Bit22_ "/\\" lBit22_
+      timeCnstrC = Op (Not $ lVar3Bit22_) "/\\" (Not lBit22_)
       timeCnstrD = Op timeCnstrB "\\/" timeCnstrC
 
       timeCnstrE = Op timeCnstrD "/\\" timeCnstrA
 
-      timeCnstr = Op lBit31 "\\/" timeCnstrE
+      timeCnstr = Op lBit31_ "\\/" timeCnstrE
 
   tySet timeCnstrA bool
   tySet timeCnstrB bool
@@ -406,19 +410,21 @@ stModOp OP_CHECKSEQUENCEVERIFY = do
   tySet timeCnstrE bool
   tySet timeCnstr bool
 
-  tySet (Not $ lBit22) bool
+  tySet (Not $ lBit22_) bool
 
   tySet lMasked int
   tySet lBit31 bint
+  tySet lBit31_ bool
   tySet lBit22 int
+  tySet lBit22_ bool
   tySet (Hex "0000FFFF") int
   tySet (Hex "80000000") int
   tySet (Hex "00400000") int
 
   addCnstr (C_IsTrue timeCnstr)
   addCnstr (C_Spec lMasked)
-  addCnstr (C_Spec lBit31)
-  addCnstr (C_Spec lBit22)
+  addCnstr (C_Spec lBit31_)
+  addCnstr (C_Spec lBit22_)
 
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op

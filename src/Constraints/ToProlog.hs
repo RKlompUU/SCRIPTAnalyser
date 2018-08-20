@@ -120,6 +120,10 @@ contradiction :: PrologWriter ()
 contradiction = plFact "false"
 
 spec2Prolog :: Expr -> PrologWriter ()
+spec2Prolog e@(Op (Op e1 "&" e2) ">>" (ConstInt shift)) = do
+  t1 <- askTy e1
+  t  <- askTy e
+  plFact $ tyIPL t ++ " #= (" ++ tyIPL t1 ++ " /\\ " ++ show e2 ++ ") >> " ++ show shift
 spec2Prolog e@(Op e1 "&" e2) = do
   t1 <- askTy e1
   t  <- askTy e
@@ -153,7 +157,7 @@ e2Prolog e@(Op e1 op e2)
       e2Prolog e2
 
       plFact $ tyIPL t1 ++ " " ++ fromJust op' ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
-      plFact $ "#\\ " ++ tyIPL t1 ++ " " ++ fromJust op' ++ " " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+      plFact $ "#\\ (" ++ tyIPL t1 ++ " " ++ fromJust op' ++ " " ++ tyIPL t2 ++ ") #==> " ++ tyIPL t ++ " #= 0"
   where op' = lookup op [("/\\","#/\\"),
                          ("\\/","#\\/"),
                          (">","#>"),
@@ -166,18 +170,18 @@ e2Prolog e@(Op e1 "==" e2) = do
   t2 <- askTy e2
 
   plFact $ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
-  plFact $ "#\\ " ++ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+  plFact $ "#\\ (" ++ tyBSPL t1 ++ " #= " ++ tyBSPL t2 ++ ") #==> " ++ tyIPL t ++ " #= 0"
 
   when (hasInts (snd t1) && hasInts (snd t2)) $ do
     plFact $ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 1"
-    plFact $ "#\\ " ++ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ " #==> " ++ tyIPL t ++ " #= 0"
+    plFact $ "#\\ (" ++ tyIPL t1 ++ " #= " ++ tyIPL t2 ++ ") #==> " ++ tyIPL t ++ " #= 0"
 e2Prolog e@(Not e') = do
   t <- askTy e
   t' <- askTy e'
 
   e2Prolog e'
 
-  plFact $ "#\\ " ++ tyIPL t' ++ " #= 0 #==> " ++ tyIPL t ++ " #= 0"
+  plFact $ "#\\ (" ++ tyIPL t' ++ " #= 0) #==> " ++ tyIPL t ++ " #= 0"
   plFact $ tyIPL t' ++ " #= 0 #==> " ++ tyIPL t ++ " #= 1"
 e2Prolog _ = return ()
 

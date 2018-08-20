@@ -367,10 +367,13 @@ initialTypes = M.fromList [(EFalse,false),
                            --(Var 2,int),
                            (Op (Var 2) "&" (Hex "0000FFFF"),int),
                            (Op (Var 2) "&" (Hex "00400000"),int),
+                           (Op (Op (Var 2) "&" (Hex "00400000")) ">>" (ConstInt 22),bool),
                            (Hex "00400000",int),
                            (Hex "0000FFFF",int),
-                           (Not (Op (Var 2) "&" (Hex "00400000")),bool)]--(Var 2,int)]
-postCnstrs = [C_Spec (Op (Var 2) "&" (Hex "00400000")),
+                           annotTy (ConstInt 22),
+                           annotTy (ConstInt 31),
+                           (Not (Op (Op (Var 2) "&" (Hex "00400000")) ">>" (ConstInt 22)),bool)]--(Var 2,int)]
+postCnstrs = [C_Spec (Op (Op (Var 2) "&" (Hex "00400000")) ">>" (ConstInt 22)),
               C_Spec (Op (Var 2) "&" (Hex "0000FFFF"))]
 
 knowledgeBased :: Expr -> Bool

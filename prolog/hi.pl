@@ -31,5 +31,5 @@ s(T9ints) :-
 (T14ints #= (T11ints /\ 0x0000FFFF)),
 (T12ints #= (T2ints + T9ints)),
 (T13ints #= (T3ints - T12ints)),
-(T12ints #\= 0),
+(T13ints #\= 0),
 (#\ 0).

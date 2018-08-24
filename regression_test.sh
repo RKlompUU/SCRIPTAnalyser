@@ -10,7 +10,7 @@ for input in scripts/*; do
 
   echo "test input: $input,\toutput: $output"
 
-  SCRIPTAnalyser-exe 10 < "$input" > $output
+  SCRIPTAnalyser-exe < "$input" > $output
 
   if [ `cmp --silent "$cmp" "$output"` ];
   then

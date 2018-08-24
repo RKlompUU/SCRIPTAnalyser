@@ -19,7 +19,7 @@ data RangeExprF r
   deriving (Num,Show,Eq,Ord,Functor)
 
 newtype RangeExpr a = RangeExpr { getFree :: Free RangeExprF a }
-  deriving (Num,Functor)
+  deriving (Num)
 
 
 type Algebra f a = f a -> a

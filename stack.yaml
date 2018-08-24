@@ -15,9 +15,9 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-11.1
-#compiler: ghcjs-0.2.1.9007019_ghc-8.0.1
-#compiler-check: match-exact
+resolver: lts-7.7
+compiler: ghcjs-0.2.1.9007019_ghc-8.0.1
+compiler-check: match-exact
 
 setup-info:
   ghcjs:
@@ -25,6 +25,8 @@ setup-info:
       ghcjs-0.2.1.9007019_ghc-8.0.1:
            url: http://ghcjs.tolysz.org/ghc-8.0-2017-02-05-lts-7.19-9007019.tar.gz
            sha1: d2cfc25f9cda32a25a87d9af68891b2186ee52f9
+
+           #allow-newer: true
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -47,10 +49,15 @@ setup-info:
 packages:
 - .
 - bitcoin-script
-- range-0.1.3.0
+- vector-0.11.0.0
+  #- range-0.1.3.0
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+- profunctors-5.3
+- binary-parser-0.5.2
+- array-0.5.2.0
+- containers-0.5.11.0
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

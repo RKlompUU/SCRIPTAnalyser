@@ -11,6 +11,15 @@ import Control.Monad.State.Lazy
 
 type CounterState a = State Int a
 
+
+(!?) :: [a] -> Int -> Maybe a
+[] !? _ = Nothing
+(x:xs) !? i
+  | i < 0  = Nothing
+  | i == 0 = Just x
+  | i > 0  = xs !? (i - 1)
+
+
 replace :: Eq a => (a, [a]) -> [a] -> [a]
 replace (x,x') xs
   = concatMap (\y -> if x == y then x' else [y]) xs

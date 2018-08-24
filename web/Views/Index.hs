@@ -11,13 +11,19 @@ import Types
 
 import KlompStandard
 
+defaultScript :: String
+defaultScript =
+  "# Use '#' to start a comment\n\
+  \# Whitespaces are allowed anywhere\n\n\
+  \01 01   # PUSH: 1\n\
+  \01 02   # PUSH: 2"
 
 renderFrontPage = do
   html $ do
     body $ do
       h1 "Front Page"
       form ! (Attr.action "/analyse") $ do
-        textarea ! Attr.name "output_script" $ toHtml ("Output script" :: String)
+        textarea ! Attr.name "output_script" ! Attr.cols "80" ! Attr.rows "40" $ toHtml defaultScript
         br
         input ! Attr.type_ "submit"
         -- Blaze.span $ toHtml ("test" :: String)
@@ -27,11 +33,18 @@ renderFrontPage = do
 renderAnalysis scrpt result = do
   html $ do
     body $ do
-      h1 (toHtml $ "Analysis of \n\n" ++ scrpt)
-      let htmlResult = case result of
-                        Left err -> toHtml err
-                        Right str -> toHtml str
-      textarea ! Attr.cols "80" ! Attr.rows "40" $ htmlResult
+      h1 (toHtml $ ("Analysis results" :: String))
+      let resultTxt = case result of
+                        Left err -> err
+                        Right str -> str
+          lineSplitted = foldl grabLine [[]] resultTxt
+          height = length lineSplitted
+          width = maximum
+                $ Prelude.map length lineSplitted
+      textarea ! Attr.readonly "true" ! Attr.cols (stringValue $ show width) ! Attr.rows (stringValue $ show height) $ toHtml resultTxt
+  where grabLine :: [String] -> Char -> [String]
+        grabLine strs '\n' = [] : strs
+        grabLine (line:lines) c = (c : line) : lines
 
 {-
 renderPubEntry = do

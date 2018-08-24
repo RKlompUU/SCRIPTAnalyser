@@ -26,5 +26,5 @@ main = do
       blaze $ renderFrontPage
     get "/analyse" $ do
       scrpt <- param "output_script"
-      result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" 1
+      result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" 3
       blaze $ renderAnalysis scrpt result

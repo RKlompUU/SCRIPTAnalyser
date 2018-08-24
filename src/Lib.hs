@@ -54,7 +54,8 @@ stripComments bs = B.reverse . snd
 analyseOpenScript_ :: String -> String -> String -> Int -> IOReport ()
 analyseOpenScript_ scrpt dir preVerdict verbosity = do
   let bs = B.pack scrpt
-  tell $ show bs ++ "\n"
+  when (verbosity >= 3) $ do
+    tell $ show bs ++ "\n"
   let bs' = B.filter (\c -> not $ any (== c) [' ','\n','\t','\r'])
           $ stripComments bs
   let script = decode bs'

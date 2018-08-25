@@ -1,0 +1,27 @@
+<html>
+  <body>
+    <h1>Front Page</h1>
+    <form action="/analyse.php">
+      First name (optional):
+      <input name="name", type="text"><br><br>
+      Email address (optional):
+      <input name="email", type="text"><br><br>
+      Verbosity of verdict printout:
+      <select name="verbosity">
+        <option value="0">0</option>
+        <option value="1", selected="selected">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select> <br><br>
+      <textarea name="output_script" cols="80" rows="40">
+# Use &#39;#&#39; to start a comment
+# Whitespaces are allowed anywhere
+
+01 01   # PUSH: 1
+01 02   # PUSH: 2
+</textarea>
+      <br>
+      <input type="submit">
+    </form>
+  </body>
+</html>

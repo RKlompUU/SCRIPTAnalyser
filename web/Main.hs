@@ -16,7 +16,6 @@ import Types
 import Views.Index
 import Lib
 
-
 blaze = html . renderHtml
 
 main = do
@@ -26,5 +25,9 @@ main = do
       blaze $ renderFrontPage
     get "/analyse" $ do
       scrpt <- param "output_script"
-      result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" 3
+      verStr <- param "verbosity"
+      let ver = if all (\c -> any (c==) ['0'..'9']) verStr
+                  then read verStr :: Int
+                  else 1
+      result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" ver
       blaze $ renderAnalysis scrpt result

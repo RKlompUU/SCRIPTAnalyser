@@ -30,7 +30,8 @@ type IOReport a = ExceptT String (WriterT String IO) a
 
 analyseOpenScript :: String -> String -> String -> Int -> IO (Either String String)
 analyseOpenScript scrpt dir preVerdict verbosity = do
-  result <- runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))
+  result <- E.catch ((runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))))
+                    (\e -> return $ (Left (show (e :: E.ErrorCall)), ""))
   case result of
     (Left err,_) -> return $ Left err
     (Right _,str) -> return $ Right str

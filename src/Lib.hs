@@ -74,8 +74,8 @@ analyseOpenScript_ scrpt dir preVerdict verbosity = do
       tell $ "---------- AST ----------\n"
       tell $ show ast
 
-      tell $ "-------------------------"
-      tell $ "-------- Inferred -------"
+      tell $ "-------------------------\n"
+      tell $ "-------- Inferred -------\n"
       tell $ dumpBranchReports branchReports' verbosity
 
   tell $ "------------------------\n"
@@ -128,7 +128,7 @@ dumpBranchReport report verbosity =
               (intercalate "\n\t" $ map show (reverse $ muts bs))
       initialStack = "Required initial stack:\n" ++
                      printStack (map Var [0,(-1)..freshV bs+1])
-      vconstrs = "Inferred additional constraints:\n\t" ++
+      vconstrs = "Inferred constraints:\n\t" ++
                  (intercalate "\n\t" $ map show (filter (not . isSpecCnstr) $ val_cnstrs bs))
       tconstrs = "Inferred types:\n\t" ++
                  (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs bs))

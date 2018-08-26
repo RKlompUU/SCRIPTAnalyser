@@ -1,10 +1,23 @@
 <html>
   <body>
-    <h1>Front Page</h1>
+    <h1>Formal Verication of Smart Contracts</h1>
+
+    <h2>SCRIPT Analyser: automatic verification of Bitcoin output scripts</h2>
     <form action="/analyse.php">
-      First name (optional):
+      <br>
+      <textarea name="output_script" cols="80" rows="15">
+# Use &#39;#&#39; to start a comment
+# Whitespaces are allowed anywhere
+
+01 01   # PUSH: 1
+01 02   # PUSH: 2
+</textarea>
+      <br><input type="submit", value="Run analysis">
+      <br><br>
+      Optional information and settings:<br><br>
+      First name:
       <input name="name", type="text"><br><br>
-      Email address (optional):
+      Email address:
       <input name="email", type="text"><br><br>
       Verbosity of verdict printout:
       <select name="verbosity">
@@ -12,16 +25,7 @@
         <option value="1", selected="selected">1</option>
         <option value="2">2</option>
         <option value="3">3</option>
-      </select> <br><br>
-      <textarea name="output_script" cols="80" rows="40">
-# Use &#39;#&#39; to start a comment
-# Whitespaces are allowed anywhere
-
-01 01   # PUSH: 1
-01 02   # PUSH: 2
-</textarea>
-      <br>
-      <input type="submit">
+      </select> <br>
     </form>
   </body>
 </html>

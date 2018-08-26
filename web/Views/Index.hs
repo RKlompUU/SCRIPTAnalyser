@@ -38,8 +38,10 @@ renderAnalysis scrpt result = do
                         Left err -> err
                         Right str -> str
           lineSplitted = foldl grabLine [[]] resultTxt
-          height = length lineSplitted + 1
-          width = maximum
+          height = min 35
+                 $ length lineSplitted + 1
+          width = min 100
+                $ maximum
                 $ Prelude.map length lineSplitted
       textarea ! Attr.readonly "true" ! Attr.cols (stringValue $ show width) ! Attr.rows (stringValue $ show height) $ toHtml resultTxt
   where grabLine :: [String] -> Char -> [String]

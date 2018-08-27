@@ -10,7 +10,7 @@ SCRIPT Analyser is a tool that infers from a given _output_ script the constrain
 The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. However, it does not yet support all types of operations. For example, add/subtract operations are not supported yet.
 
 #### Installation
-Alternativaly, try it out online first at: https://vm100.cs.stir.ac.uk/~rkl/home.html
+Alternativaly, try it out online at: https://vm100.cs.stir.ac.uk/~rkl/home.html
 
 Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)
 

@@ -29,7 +29,7 @@
           </td>
         </tr>
       </table>
-      <br><input type="submit", value="Run analysis">
+      <input type="submit", value="Run analysis">
       <br><br>
       Optional information and settings:<br><br>
       First name:
@@ -85,9 +85,9 @@ function mod_oscript(id) {
 93      # ADD (symbolically pushing: x + 1)
 
 01 01   # PUSH 1
-94      # SUBTRACT (symbolically pushing: x + 1 - 1)
+94      # SUBTRACT (symbolically pushing: (x + 1) - 1)
 
-94      # SUBTRACT (symbolically pushing: x + 1 - 1 - x)`;
+94      # SUBTRACT (symbolically pushing: (x + 1) - 1 - x)`;
       break;
     default:
       document.getElementById("oscript").value = `# Use '#' to start a comment

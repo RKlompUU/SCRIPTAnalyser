@@ -1,9 +1,17 @@
 <html>
   <body>
-    <h1>Formal Verication of Smart Contracts</h1>
-
-    <h2>SCRIPT Analyser: automatic verification of Bitcoin output scripts</h2>
-    <form action="/analyse.php">
+    <h1>Formal Verification of Smart Contracts</h1>
+    Research output: (conducted by Andrea Bracciali and Rick Klomp)
+    <ul>
+      <li>SCRIPT Analyser - a tool that can be applied to verify whether imposed constraints of a Bitcoin output script are as expected.</li>
+    </ul>
+    <h2>SCRIPT Analyser: formal and automatic verification of Bitcoin output scripts</h2>
+    SCRIPT Analyser statically analyses the output scripts of Bitcoin.<br>
+    The technical approach is described in the paper <a href=>to be uploaded</a>.<br>
+    <br>
+    Try it out below. Enter the output script in bytestring format (i.e. the same format as scripts occur in the Bitcoin Blockchain).<br>
+    Optionally fill in additional information below, and when ready hit "Run analysis".
+    <form action="/~rkl/analyse.php">
       <br>
       <textarea name="output_script" cols="80" rows="15">
 # Use &#39;#&#39; to start a comment
@@ -27,6 +35,12 @@
         <option value="3">3</option>
       </select> <br>
     </form>
+    <ul>
+      <li>0: minimal print, only prints verdicts</li>
+      <li>1: Verbose prints, additionally prints inferred constraints</li>
+      <li>2: _More_ verbose prints, additionally prints inferred types of expressions, as well as a trace of stack mutations</li>
+      <li>>=3: Verbose prints (debugging mode), additionally prints prolog related information</li>
+    </ul>
     <br>
     <br>
     An offline version of the tool can be found at

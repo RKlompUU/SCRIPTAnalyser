@@ -3,8 +3,8 @@
 $explanation = <<<XYZ
 <br>
 <h2>Explanation of output</h2>
-<p>(Note: this only describes the default verbosity output mode)</p>
-<p>For every unique branch of the supplied output SCRIPT, the tool will print a verdict under a distinct “— Symbolic evaluation report of execution branch <em>i</em>” section</p>
+<p>(Note: this currently only describes the default verbosity output mode)</p>
+<p>For every unique branch of the supplied output script, the tool will print a verdict under a distinct “— Symbolic evaluation report of execution branch <em>i</em>” section</p>
 <p>In this section, the following information is printed:</p>
 <ul>
 <li>The respective branch’s decision points are shown (i.e. for every encountered IF operation, is its True branch traversed or is its False branch traversed?)</li>

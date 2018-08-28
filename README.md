@@ -1,6 +1,5 @@
 # SCRIPT Analyser
 ## Symbolic verification of Bitcoin's output scripts
-
 ![Alt text](.imgs/outputExampleA.png?raw=true "Example")
 
 SCRIPT Analyser is a tool that infers from a given _output_ script the constraints that must be met by an _input_ script to create a valid transaction. Consider for example a standard P2PkH output script, the tool will report that a correct input script must:
@@ -10,8 +9,9 @@ SCRIPT Analyser is a tool that infers from a given _output_ script the constrain
 
 The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. However, it does not yet support all types of operations. For example, add/subtract operations are not supported yet.
 
-#### Installation
+Try it out online at: https://vm100.cs.stir.ac.uk/~rkl/home.html
 
+#### Installation
 Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)
 
 Dependency: swi-prolog (http://www.swi-prolog.org/Download.html)

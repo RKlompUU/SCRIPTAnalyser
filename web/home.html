@@ -13,14 +13,31 @@
     Optionally fill in additional information below, and when ready hit "Run analysis".
     <form action="/~rkl/analyse.php">
       <br>
-      <textarea name="output_script" cols="80" rows="15">
+      <table>
+        <tr>
+          <th>
+          </th>
+        </tr>
+        <tr>
+          <td>
+            <textarea id="oscript" name="output_script" cols="80" rows="15">
 # Use &#39;#&#39; to start a comment
 # Whitespaces are allowed anywhere
 
 01 01   # PUSH: 1
 01 02   # PUSH: 2
-</textarea>
-      <br><input type="submit", value="Run analysis">
+            </textarea>
+          </td>
+          <td>
+            <h3>Presets:</h3>
+            <button onclick="mod_oscript(-1)" type="button">Original</button><br>
+            <button onclick="mod_oscript(0)" type="button">Standard P2PKH script</button><br>
+            <button onclick="mod_oscript(1)" type="button">Add,subtract (constants, incorrect)</button><br>
+            <button onclick="mod_oscript(2)" type="button">Add,subtract (variable, incorrect)</button>
+          </td>
+        </tr>
+      </table>
+      <input type="submit", value="Run analysis">
       <br><br>
       Optional information and settings:<br><br>
       First name:
@@ -47,3 +64,52 @@
     <a href="https://github.com/RKlompUU/SCRIPTAnalyser">SCRIPTAnalyser (Github)</a>.
   </body>
 </html>
+
+<script>
+function mod_oscript(id) {
+  switch(id) {
+    case 0:
+      document.getElementById("oscript").value = `# Standard P2PKH script
+
+`;
+      break;
+    case 1:
+      document.getElementById("oscript").value = `# (1 + 1) - 2 = 0.
+#
+# Regardless of the input script, evaluation will always
+# end with a false value at the stack's head entry
+
+01 01   # PUSH 1
+01 01   # PUSH 1
+93      # ADD
+
+01 02   # PUSH 2
+
+94      # SUBTRACT`;
+      break;
+    case 2:
+      document.getElementById("oscript").value = `# \\/x. (x + 1) - 1 - x = 0
+# , where x is defined by the input script
+#
+# Regardless of the input script, evaluation will always
+# end with a false value at the stack's head entry
+
+# DUP
+01 01   # PUSH 1
+93      # ADD (symbolically pushing: x + 1)
+
+01 01   # PUSH 1
+94      # SUBTRACT (symbolically pushing: (x + 1) - 1)
+
+94      # SUBTRACT (symbolically pushing: (x + 1) - 1 - x)`;
+      break;
+    default:
+      document.getElementById("oscript").value = `# Use '#' to start a comment
+# Whitespaces are allowed anywhere
+
+01 01   # PUSH: 1
+01 02   # PUSH: 2`;
+    break;
+  }
+}
+</script>

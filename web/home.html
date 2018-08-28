@@ -34,7 +34,9 @@
             <button onclick="mod_oscript(-1)" type="button">Original</button><br>
             <button onclick="mod_oscript(0)" type="button">Standard P2PKH script</button><br>
             <button onclick="mod_oscript(1)" type="button">Add,subtract (constants, incorrect)</button><br>
-            <button onclick="mod_oscript(2)" type="button">Add,subtract (variable, incorrect)</button>
+            <button onclick="mod_oscript(2)" type="button">Add,subtract (variable, incorrect)</button><br>
+            <button onclick="mod_oscript(3)" type="button">More complex, A</button><br>
+            <button onclick="mod_oscript(4)" type="button">More complex, B</button>
           </td>
         </tr>
       </table>
@@ -110,6 +112,18 @@ ac    # CHECKSIG`;
 94      # SUBTRACT (symbolically pushing: (x + 1) - 1)
 
 94      # SUBTRACT (symbolically pushing: (x + 1) - 1 - x)`;
+      break;
+    case 3:
+      document.getElementById("oscript").value = `# Note: I have not made this example readable
+# However, the AST printed by the analyser does present it more readable
+
+768201400143a57ca820401e995384136627161b35fc47ecba6a4ba564b4f4bb286a88fc4672c00efa61879a63756741047bafaf9f46bdbaa9caddc1071e6c0c438e691246b72b0eb87fde4e6c61634e963d2d513391593016339d649c1f1d44e92316dc72f64fa0d3785bd47f49a1b93cad684104d09be54f7e26f6319c2d366a04f766a7854cda67785c26f5ffdb59d4b9b1f45e272ba7cd09743cbab01fa28d19032e61f35c61ee5298c7dd7301aa05213a4ec4ac`;
+      break;
+    case 4:
+      document.getElementById("oscript").value = `# Note: I have not made this example readable
+# However, the AST printed by the analyser does present it more readable
+
+6352410460d353f4c834bccd1a0e690dc5b7a3c0e07f1ed916f05234ea539c08c0792f3ee90b7704a329e6e0a9e4cda2eb156ac6b1721f53a308d2bda2cce56efa925ddd210339c1817d51455acebcd4f6c0d0dcda537becf2d2ac34f4209cd31e28cab6d19552af6752410414c7ded5473ccaa019567b624e5f7425244b63e67695db39f69adab7b07dfc0c10d4b9e9d5ff3783a9c887f4f75b94d8a28d26cf630a54c66713ba6e77f38bc22102882b16fb1e677ed36d73c64db841dad33df045771596285988428f59a8e3e34652af68`;
       break;
     default:
       document.getElementById("oscript").value = `# Use '#' to start a comment

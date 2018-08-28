@@ -35,7 +35,7 @@ analyseOpenScript scrpt dir preVerdict verbosity = do
   result <- E.catch ((runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))))
                     (\e -> return $ (Left (show (e :: E.ErrorCall)), ""))
   case result of
-    (Left err,_) -> return $ Left err
+    (Left err,str) -> return $ Left ("Error: " ++ err)
     (Right _,str) -> return $ Right str
 --(preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall)))
 
@@ -86,8 +86,9 @@ analyseOpenScript_ scrpt dir preVerdict verbosity = do
   let successBuilds = filter (prologValid) branchReports'
 
   -- Non verbose section.
-  when (null successBuilds) $ error (preVerdict ++ "nonredeemable")
-  tell (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") -- >> exitSuccess
+  if (null successBuilds)
+    then tell (preVerdict ++ "nonredeemable")
+    else tell (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") -- >> exitSuccess
 
 prologVerify :: String -> BranchReport -> IOReport BranchReport
 prologVerify dir report@(BranchReport _ _ (Just err) _ _) =

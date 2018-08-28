@@ -36,4 +36,6 @@ main = do
       result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" ver
       blaze $ renderAnalysis scrpt result
       liftIO $ putStrLn "---"
+    get "/submitInfo" $ do
+      return ()
   putStrLn "Server shutdown\n*******"

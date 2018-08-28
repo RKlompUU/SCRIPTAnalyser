@@ -16,8 +16,6 @@ XYZ;
 
 $request = "139.153.253.238:3000/analyse?output_script="
          . urlencode($_GET["output_script"])
-         . "&name=" . urlencode($_GET["name"])
-         . "&email=" . urlencode($_GET["email"])
          . "&verbosity=" . urlencode($_GET["verbosity"])
          . "&ip=" . urlencode($_SERVER["REMOTE_ADDR"]);
 #echo $request;

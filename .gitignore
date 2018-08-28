@@ -11,3 +11,4 @@ dist
 cabal.sandbox.config
 cabal.config
 *.swp
+.web-log

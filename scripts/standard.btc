@@ -1,1 +1,14 @@
-76a9145e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d88ac
+#
+# Standard P2PKH script
+#
+
+
+76    # DUP
+
+a9    # HASH160
+14 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d    # Push bytestring
+88    # EQUAL_VERIFY
+
+ac    # CHECKSIG
+
+# <VERIFY>

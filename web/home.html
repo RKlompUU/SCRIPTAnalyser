@@ -6,7 +6,8 @@
       <li>SCRIPT Analyser - a tool that can be applied to verify whether imposed constraints of a Bitcoin output script are as expected.</li>
     </ul>
     <h2>SCRIPT Analyser: formal and automatic verification of Bitcoin output scripts</h2>
-    SCRIPT Analyser statically analyses the output scripts of Bitcoin.<br>
+    SCRIPT Analyser statically analyses the output scripts of Bitcoin:<br>
+    under which conditions can the script terminate with success (and the coins be redeemed)?<br>
     The technical approach is described in the paper <a href=>to be uploaded</a>.<br>
     <br>
     Try it out below. Enter the output script in bytestring format (i.e. the same format as scripts occur in the Bitcoin Blockchain).<br>
@@ -38,12 +39,7 @@
         </tr>
       </table>
       <input type="submit", value="Run analysis">
-      <br><br>
-      Optional information and settings:<br><br>
-      First name:
-      <input name="name", type="text"><br><br>
-      Email address:
-      <input name="email", type="text"><br><br>
+      <br>
       Verbosity of verdict printout:
       <select name="verbosity">
         <option value="0">0</option>
@@ -51,13 +47,19 @@
         <option value="2">2</option>
         <option value="3">3</option>
       </select> <br>
+      <ul>
+        <li>0: minimal print, only prints verdicts</li>
+        <li>1: Verbose prints, additionally prints inferred constraints</li>
+        <li>2: _More_ verbose prints, additionally prints inferred types of expressions, as well as a trace of stack mutations</li>
+        <li>>=3: Verbose prints (debugging mode), additionally prints prolog related information</li>
+      </ul>
+      <br>
+      Please, if you use it or are interested <b>let us know</b> (this is optional - we may get in touch):<br><br>
+      First name:
+      <input name="name", type="text"><br><br>
+      Email address:
+      <input name="email", type="text"><br><br>
     </form>
-    <ul>
-      <li>0: minimal print, only prints verdicts</li>
-      <li>1: Verbose prints, additionally prints inferred constraints</li>
-      <li>2: _More_ verbose prints, additionally prints inferred types of expressions, as well as a trace of stack mutations</li>
-      <li>>=3: Verbose prints (debugging mode), additionally prints prolog related information</li>
-    </ul>
     <br>
     <br>
     An offline version of the tool can be found at
@@ -71,7 +73,13 @@ function mod_oscript(id) {
     case 0:
       document.getElementById("oscript").value = `# Standard P2PKH script
 
-`;
+76    # DUP
+
+a9    # HASH160
+14 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d    # Push hashed public key
+88    # EQUAL_VERIFY
+
+ac    # CHECKSIG`;
       break;
     case 1:
       document.getElementById("oscript").value = `# (1 + 1) - 2 = 0.
@@ -94,7 +102,7 @@ function mod_oscript(id) {
 # Regardless of the input script, evaluation will always
 # end with a false value at the stack's head entry
 
-# DUP
+76      # DUP
 01 01   # PUSH 1
 93      # ADD (symbolically pushing: x + 1)
 

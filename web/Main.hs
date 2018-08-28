@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import System.IO
+
 import Web.Scotty
 import Network.Wai.Middleware.RequestLogger
 import Text.Blaze.Html.Renderer.Text
@@ -19,6 +21,8 @@ import Lib
 blaze = html . renderHtml
 
 main = do
+  hSetBuffering stdout NoBuffering
+  putStrLn "*******\nServer booted"
   scotty 3000 $ do
     middleware logStdoutDev
     get "/" $ do
@@ -31,3 +35,5 @@ main = do
                   else 1
       result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" ver
       blaze $ renderAnalysis scrpt result
+      liftIO $ putStrLn "---"
+  putStrLn "Server shutdown\n*******"

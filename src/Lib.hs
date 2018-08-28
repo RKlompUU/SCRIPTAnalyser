@@ -24,6 +24,8 @@ import Constraints.Gen
 import Constraints.Types
 import Constraints.ToProlog
 import Control.Monad
+
+import System.IO.Temp
 import qualified Control.Exception as E
 
 type IOReport a = ExceptT String (WriterT String IO) a
@@ -84,7 +86,7 @@ analyseOpenScript_ scrpt dir preVerdict verbosity = do
   let successBuilds = filter (prologValid) branchReports'
 
   -- Non verbose section.
-  when (null successBuilds) $ tell (preVerdict ++ "nonredeemable")-- >> exitFailure
+  when (null successBuilds) $ error (preVerdict ++ "nonredeemable")
   tell (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") -- >> exitSuccess
 
 prologVerify :: String -> BranchReport -> IOReport BranchReport
@@ -94,10 +96,15 @@ prologVerify dir report =
   case branchToProlog (symbolicEval report) of
     Left e -> return $ report { prologReport = e }
     Right pl -> do
-      let fn = dir ++ "BitcoinAnalysis-script.pl"
+      dir' <- liftIO $ createTempDirectory "/tmp" "SCRIPTAnalyser"
+      let fn = dir' ++ "/BitcoinAnalysis-script.pl"
+
       liftIO $ writeFile fn pl
       --results <- mapM (verifyC fn) (zip [0..] (val_cnstrs bs))
       result <- verifyC fn (-1,undefined)
+      liftIO $ removeIfFileExists fn
+      liftIO $ removeIfDirExists dir'
+
       let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ fst result --concat (map fst results)
       if snd result
         then return $ report { prologValid = True, prologReport = r }

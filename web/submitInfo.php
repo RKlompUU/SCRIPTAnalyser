@@ -1,7 +1,7 @@
 <?php
 
 $request = "139.153.253.238:3000/submitInfo?"
-         . "&name=" . urlencode($_GET["name"])
+         . "name=" . urlencode($_GET["name"])
          . "&email=" . urlencode($_GET["email"])
          . "&ip=" . urlencode($_SERVER["REMOTE_ADDR"]);
 #echo $request;
@@ -18,7 +18,7 @@ curl_close($ch);
 
 if (isset($error_msg))
 {
-  echo "Unfortunately, our backend is currently down. We would however very much appreciate it if you could retry entering your personal information soon!";
+  echo "Unfortunately, our backend is currently down. We would however very much appreciate it if you could retry entering your personal information again later.";
 }
 else
 {

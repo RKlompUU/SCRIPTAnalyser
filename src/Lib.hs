@@ -11,10 +11,16 @@ import System.Process
 import Script.Parser
 import Script.AST
 import Data.Bitcoin.Script
+import Data.Word (Word8)
+import Data.Binary (Binary)
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Base16.Lazy as BS16L
+import qualified Data.ByteString.Lazy as BSL
 
 import Data.List
 import Data.Maybe
+
+import Debug.Trace
 
 import qualified Data.Map.Lazy as M
 
@@ -39,12 +45,6 @@ analyseOpenScript scrpt dir preVerdict verbosity = do
     (Right _,str) -> return $ Right str
 --(preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall)))
 
-replaceX :: Eq a => (a,a) -> [a] -> [a]
-replaceX _ [] = []
-replaceX (f,t) (x:xs)
-  | f == x = t : replaceX (f,t) xs
-  | True   = x : replaceX (f,t) xs
-
 stripComments :: B.ByteString -> B.ByteString
 stripComments bs = B.reverse . snd
                  $ B.foldl walker (False,B.empty) bs
@@ -54,13 +54,25 @@ stripComments bs = B.reverse . snd
         walker (True, bs') '\n' = (False, bs')
         walker (True, bs') _    = (True, bs')
 
+translatePUSH :: String -> String
+translatePUSH [] = []
+translatePUSH scrpt =
+  let push = "PUSH "
+      scrpt_ = take (length push) scrpt
+      scrpt__ = drop (length push) scrpt
+  in case (if scrpt_ == push then Just undefined else Nothing) >> findIndex (== '\n') scrpt__ of
+      Just i  -> ((B.unpack . BS16L.encode . BSL.singleton) (toEnum (div i 2) :: Word8)) ++
+                 (take i scrpt__) ++ translatePUSH (drop i scrpt__)
+      Nothing -> head scrpt : translatePUSH (tail scrpt)
+
 analyseOpenScript_ :: String -> String -> String -> Int -> IOReport ()
 analyseOpenScript_ scrpt dir preVerdict verbosity = do
-  let bs = B.pack scrpt
+  let bs = B.pack (translatePUSH scrpt)
   when (verbosity >= 3) $ do
     tell $ show bs ++ "\n"
   let bs' = B.filter (\c -> not $ any (== c) [' ','\n','\t','\r'])
-          $ stripComments bs
+          . stripComments
+          $ parseMemnomicCodes bs
   let script = decode bs'
 
   let ast = runFillLabels $ buildAST (scriptOps script)

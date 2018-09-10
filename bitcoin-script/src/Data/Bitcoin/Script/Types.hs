@@ -4,13 +4,14 @@ module Data.Bitcoin.Script.Types
 , PushDataType(..)
 , isPushOp
 , opPushData
+, memnomic2Hex
 ) where
 
 import Control.Monad (liftM2, unless, forM_)
 import Control.Applicative ((<$>))
 
 import Data.Word (Word8)
-import Data.Binary (Binary, get, put)
+import Data.Binary (Binary, get, put, decode, encode)
 import Data.Binary.Get
     ( isEmpty
     , getWord8
@@ -28,6 +29,11 @@ import qualified Data.ByteString as BS
     ( ByteString
     , length
     )
+import qualified Data.ByteString.Lazy as BSL
+    ( ByteString, singleton )
+
+import qualified Data.ByteString.Lazy.Char8 as BS8L
+import qualified Data.ByteString.Base16.Lazy as BS16L
 
 -- | Data type representing a transaction script. Scripts are defined as lists
 -- of script operators 'ScriptOp'. Scripts are used to:
@@ -186,6 +192,19 @@ data ScriptOp
     | OP_EOF
 
         deriving (Show, Read, Eq)
+
+memnomic2Hex :: [(BSL.ByteString, BSL.ByteString)]
+memnomic2Hex =
+  let opCodes = [0x4f..0xb9]
+      autoSet = map (\op -> ((BS8L.pack . show) $ (decode (BSL.singleton op) :: ScriptOp), BS16L.encode $ BSL.singleton op))
+              $ opCodes
+      manualSet = map (\(str,op) -> (BS8L.pack str, BS8L.pack op))
+                $ [("OP_0", "00"),
+                   ("OP_FALSE", "00"),
+                   ("OP_PUSHDATA1", "4c"),
+                   ("OP_PUSHDATA2", "4d"),
+                   ("OP_PUSHDATA4", "4e")]
+  in manualSet ++ autoSet
 
 instance Binary ScriptOp where
 

@@ -45,19 +45,28 @@ analyseOpenScript scrpt dir preVerdict verbosity = do
     (Right _,str) -> return $ Right str
 --(preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall)))
 
-stripComments :: B.ByteString -> B.ByteString
-stripComments bs = B.reverse . snd
-                 $ B.foldl walker (False,B.empty) bs
-  where walker :: (Bool, B.ByteString) -> Char -> (Bool, B.ByteString)
+stripComments :: String -> String
+stripComments bs = reverse . snd
+                 $ foldl walker (False,[]) bs
+  where walker :: (Bool, String) -> Char -> (Bool, String)
         walker (False, bs') '#' = (True, bs')
-        walker (False, bs') c   = (False, B.cons c bs')
-        walker (True, bs') '\n' = (False, bs')
+        walker (False, bs') c   = (False, c : bs')
+        walker (True, bs') '\n' = (False, '\n' : bs')
         walker (True, bs') _    = (True, bs')
+
+-- Except newline
+stripWhiteSpaces :: String -> String
+stripWhiteSpaces =
+  filter (\c -> not $ any (== c) [' ','\t','\r'])
+
+stripNewLines :: String -> String
+stripNewLines =
+  filter (/= '\n')
 
 translatePUSH :: String -> String
 translatePUSH [] = []
 translatePUSH scrpt =
-  let push = "PUSH "
+  let push = "PUSH"
       scrpt_ = take (length push) scrpt
       scrpt__ = drop (length push) scrpt
   in case (if scrpt_ == push then Just undefined else Nothing) >> findIndex (== '\n') scrpt__ of
@@ -67,13 +76,16 @@ translatePUSH scrpt =
 
 analyseOpenScript_ :: String -> String -> String -> Int -> IOReport ()
 analyseOpenScript_ scrpt dir preVerdict verbosity = do
-  let bs = B.pack (translatePUSH scrpt)
+  let bs = (  parseMemnomicCodes
+            . B.pack
+            . stripNewLines
+            . translatePUSH
+            . stripWhiteSpaces
+            . stripComments )
+         $ scrpt
   when (verbosity >= 3) $ do
     tell $ show bs ++ "\n"
-  let bs' = B.filter (\c -> not $ any (== c) [' ','\n','\t','\r'])
-          . stripComments
-          $ parseMemnomicCodes bs
-  let script = decode bs'
+  let script = decode bs
 
   let ast = runFillLabels $ buildAST (scriptOps script)
       branchReports = genBuildStates ast
@@ -81,7 +93,7 @@ analyseOpenScript_ scrpt dir preVerdict verbosity = do
 
   when (verbosity >= 2) $ do
       tell "SCRIPT echo, followed by the lexed intermediate variant:\n"
-      tell $ (show $ bs') ++ "\n"
+      tell $ (show $ bs) ++ "\n"
       tell $ (show script) ++ "\n"
   when (verbosity >= 1) $ do -- Verbose section
       tell $ "-------------------------\n"

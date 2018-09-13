@@ -11,6 +11,8 @@ import Control.Monad.IO.Class
 import Network.HTTP.Simple
 import Network.HTTP.Conduit
 
+import qualified Data.ByteString.Lazy.Char8 as B
+
 import Data.Maybe
 
 import Data.Bitcoin.Script
@@ -42,4 +44,7 @@ main = do
       liftIO $ putStrLn "---"
     get "/submitInfo" $ do
       return ()
+    get "/serialize" $ do
+      scrpt <- serializeScript <$> param "script"
+      blaze $ renderLargeString (B.unpack scrpt)
   putStrLn "Server shutdown\n*******"

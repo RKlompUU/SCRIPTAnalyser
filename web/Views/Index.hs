@@ -37,13 +37,16 @@ renderAnalysis result = do
       let resultTxt = case result of
                         Left err -> err
                         Right str -> str
-          lineSplitted = foldl grabLine [[]] resultTxt
-          height = min 35
-                 $ length lineSplitted + 1
-          width = min 100
-                $ maximum
-                $ Prelude.map length lineSplitted
-      textarea ! Attr.readonly "true" ! Attr.cols (stringValue $ show width) ! Attr.rows (stringValue $ show height) $ toHtml resultTxt
+      renderLargeString resultTxt
+
+renderLargeString str = do
+  let lineSplitted = foldl grabLine [[]] str
+      height = min 35
+             $ length lineSplitted + 1
+      width = min 100
+            $ maximum
+            $ Prelude.map length lineSplitted
+  textarea ! Attr.readonly "true" ! Attr.cols (stringValue $ show width) ! Attr.rows (stringValue $ show height) $ toHtml str
   where grabLine :: [String] -> Char -> [String]
         grabLine strs '\n' = [] : strs
         grabLine (line:lines) c = (c : line) : lines

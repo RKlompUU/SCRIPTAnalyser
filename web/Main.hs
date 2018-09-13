@@ -13,6 +13,7 @@ import Network.HTTP.Conduit
 
 import Data.Maybe
 
+import Data.Bitcoin.Script
 import Types
 
 import Views.Index
@@ -28,13 +29,16 @@ main = do
     get "/" $ do
       blaze $ renderFrontPage
     get "/analyse" $ do
-      scrpt <- param "output_script"
+      oscrpt <- serializeScript <$> param "output_script"
+      rscrpt <- serializeScript <$> param "redeem_script"
       verStr <- param "verbosity"
       let ver = if all (\c -> any (c==) ['0'..'9']) verStr
                   then read verStr :: Int
                   else 1
-      result <- liftIO $ analyseOpenScript scrpt "/tmp/" "" ver
-      blaze $ renderAnalysis scrpt result
+      result <- case scriptClass oscrpt of
+                  Redeem rscrptHash -> liftIO $ analyseOpenScript rscrpt "/tmp/" "" ver
+                  _ -> liftIO $ analyseOpenScript oscrpt "/tmp/" "" ver
+      blaze $ renderAnalysis result
       liftIO $ putStrLn "---"
     get "/submitInfo" $ do
       return ()

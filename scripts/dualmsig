@@ -1,0 +1,44 @@
+# msig a: [sig_a1, sig_a2]
+# msig b: [sig_b1, sig_b2]
+
+# cnstrs: msig a /\ msig b
+
+
+#
+# pseudo :
+#
+# push 1
+# push pub_a1
+# push pub_a2
+# push 2
+# msigverify
+#
+# push 1
+# push pub_b1
+# push pub_b2
+# push 2
+# msig
+
+
+PUSH dead
+OP_SWAP
+
+PUSH 01
+# priv key: 1ea032097d81e37a0af5a69f690eff0c452ee84db4ca073dd36c9c03c44ee3b2 
+PUSH 04dd3383b55a41169b3e38a0e13a646033ca67e2cfed53e4c53386bf65485df24751f52d6d51a96ed12c4a90d5c9c696052735e3445cb9ed36ec6358eaa316c6f0
+# priv key: 6583cb6e9e1b41a82963d8eb0f41b8beca757787a4a6cb7c24eb42058dddd9da
+PUSH 0465aa86c337dd2dd77b41b13c2628084e4fa09a7fc043ec7a5731214be61017b0026e17821c37f04a7f5acab931383fbdc78ed05f4856e8b392b34378bd0ed1d1
+PUSH 02
+OP_CHECKMULTISIG
+69
+
+PUSH dead
+OP_SWAP
+
+PUSH 01
+# priv key: 32d39769129edc93eec02a2bc976ec0f3cdfcb61ac109922a6cb63465e5d7f2b
+PUSH 04acfc2c831e5fb171dfbf155d8b5e23447673ad1012e331fee85214c9070e1ef4b390ee7bd3168684b3da05e51d323c2b1920d1210c858327c5499c41afeab6e0
+# priv key: 28af1bef232f4817412d5c39291aca1bd93bf8836bdf4f480bd717cd0ff8dfb0
+PUSH 04e5238ab2a17f0bcae04fc07e421fd7b4f80fc9b8a3f3ab4e5eeb7b255800ec5091d3e5985039bb2580e9758ea186329fbc50bff49d9018a72343c733b437b19f
+PUSH 02
+OP_CHECKMULTISIG

@@ -24,6 +24,7 @@
         <tr>
           <td>
             <textarea id="oscript" name="output_script" cols="80" rows="15">
+# Enter your output script here
 # Use &#39;#&#39; to start a comment
 # Whitespaces are allowed anywhere
 
@@ -39,6 +40,13 @@
             <button onclick="mod_oscript(2)" type="button">Subtract (variable, incorrect)</button><br>
             <button onclick="mod_oscript(3)" type="button">More complex, A</button><br>
             <button onclick="mod_oscript(4)" type="button">More complex, B</button>
+          </td>
+          <td>
+            <textarea id="rscript" name="redeem_script" cols="80" rows="15">
+# Enter your redeem script here
+
+
+            </textarea>
           </td>
         </tr>
       </table>
@@ -70,6 +78,13 @@
       <input name="email", type="text"><br><br>
       <input type="submit", value="Submit information">
     </form>
+    <br>
+      <form action="/~rkl/serializeScript.php">
+          Serialization of a script:<br>
+          <textarea id="rscript" name="script" cols="80" rows="15">
+# Enter the script you want serialized here
+          </textarea>
+      </form>
   </body>
 </html>
 

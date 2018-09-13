@@ -54,7 +54,7 @@ main = do
   let dir = fromMaybe "/tmp/" (args !? 1)
   let preVerdict = fromMaybe "" (args !? 2)
 
-  scrpt <- readStdin
+  scrpt <- serializeScript <$> readStdin
   result <- analyseOpenScript scrpt dir preVerdict m
   case result of
     Left err -> putStrLn err

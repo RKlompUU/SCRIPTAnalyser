@@ -30,7 +30,7 @@ renderFrontPage = do
     --  ul $ do
   --      mapM_ (li . renderPubEntry) content
 
-renderAnalysis scrpt result = do
+renderAnalysis result = do
   html $ do
     body $ do
       h1 (toHtml $ ("Analysis results" :: String))

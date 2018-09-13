@@ -1,5 +1,6 @@
 module Lib
     ( analyseOpenScript
+    , serializeScript
     ) where
 
 
@@ -36,7 +37,16 @@ import qualified Control.Exception as E
 
 type IOReport a = ExceptT String (WriterT String IO) a
 
-analyseOpenScript :: String -> String -> String -> Int -> IO (Either String String)
+serializeScript :: String -> B.ByteString
+serializeScript =
+  parseMemnomicCodes
+  . B.pack
+  . stripNewLines
+  . translatePUSH
+  . stripWhiteSpaces
+  . stripComments
+
+analyseOpenScript :: B.ByteString -> String -> String -> Int -> IO (Either String String)
 analyseOpenScript scrpt dir preVerdict verbosity = do
   result <- E.catch ((runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))))
                     (\e -> return $ (Left (show (e :: E.ErrorCall)), ""))
@@ -74,15 +84,8 @@ translatePUSH scrpt =
                  (take i scrpt__) ++ translatePUSH (drop i scrpt__)
       Nothing -> head scrpt : translatePUSH (tail scrpt)
 
-analyseOpenScript_ :: String -> String -> String -> Int -> IOReport ()
-analyseOpenScript_ scrpt dir preVerdict verbosity = do
-  let bs = (  parseMemnomicCodes
-            . B.pack
-            . stripNewLines
-            . translatePUSH
-            . stripWhiteSpaces
-            . stripComments )
-         $ scrpt
+analyseOpenScript_ :: B.ByteString -> String -> String -> Int -> IOReport ()
+analyseOpenScript_ bs dir preVerdict verbosity = do
   when (verbosity >= 3) $ do
     tell $ show bs ++ "\n"
   let script = decode bs

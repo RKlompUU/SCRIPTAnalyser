@@ -2,6 +2,7 @@ module Data.Bitcoin.Script.Types
 ( ScriptOp(..)
 , Script(..)
 , PushDataType(..)
+, ScriptClass(..)
 , isPushOp
 , opPushData
 , memnomic2Hex
@@ -547,3 +548,9 @@ opPushData bs
     | otherwise         = error "opPushData: payload size too big"
   where
     len = BS.length bs
+
+
+data ScriptClass =
+    Redeem BS.ByteString
+  | NonStandard
+  deriving (Show,Eq)

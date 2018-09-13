@@ -44,7 +44,7 @@ main = do
                     let rHash = hash160 rscrpt
                     in if BL.toStrict rHash == rscrptHash
                         then liftIO $ analyseOpenScript rscrpt "/tmp/" "" ver
-                        else return $ Left "Error: hash in output script does not equal hash of redeem script!"
+                        else return $ Left $ "Error: hash in output script does not equal hash of redeem script!\n\nHash inside output script: " ++ show rscrptHash ++ "\nActual hash of redeem script: " ++ show rHash
                   _ -> liftIO $ analyseOpenScript oscrpt "/tmp/" "" ver
       blaze $ renderAnalysis result
       liftIO $ putStrLn "---"

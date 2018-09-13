@@ -46,5 +46,5 @@ scriptClass :: BSL.ByteString -> ScriptClass
 scriptClass bs =
   let scrpt = decode bs
   in case scriptOps scrpt of
-    [OP_HASH160, OP_PUSHDATA h _, OP_EQUALVERIFY] | BS.length h == 20 -> Redeem h
+    [OP_HASH160, OP_PUSHDATA h _, OP_EQUAL] | BS.length h == 20 -> Redeem h
     _  -> NonStandard

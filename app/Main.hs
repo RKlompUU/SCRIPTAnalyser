@@ -5,7 +5,6 @@ import System.Exit
 import System.Environment
 
 import KlompStandard
-
 import Data.List
 import Data.Maybe
 
@@ -55,7 +54,6 @@ main = do
   let preVerdict = fromMaybe "" (args !? 2)
 
   scrpt <- serializeScript <$> readStdin
-  putStrLn $ show (hash256 scrpt)
   result <- analyseOpenScript scrpt dir preVerdict m
   case result of
     Left err -> putStrLn err

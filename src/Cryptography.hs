@@ -4,6 +4,8 @@ import Crypto.Hash
 
 import qualified Data.ByteString.Lazy as BS
 
+import qualified Data.ByteString.Base16.Lazy as BS16L
+
 hash256 :: BS.ByteString -> BS.ByteString
 hash256 = sha256 . sha256
 
@@ -14,10 +16,10 @@ sha256 :: BS.ByteString -> BS.ByteString
 sha256 bs =
   BS.fromStrict
   $ digestToHexByteString
-  $ (hashlazy bs :: Digest SHA256)
+  $ (hashlazy (fst $ BS16L.decode bs) :: Digest SHA256)
 
 ripemd160 :: BS.ByteString -> BS.ByteString
 ripemd160 bs =
   BS.fromStrict
   $ digestToHexByteString
-  $ (hashlazy bs :: Digest RIPEMD160)
+  $ (hashlazy (fst $ BS16L.decode bs) :: Digest RIPEMD160)

@@ -39,7 +39,8 @@
             <button onclick="mod_oscript(1)" type="button">Add,subtract (constants, incorrect)</button><br>
             <button onclick="mod_oscript(2)" type="button">Subtract (variable, incorrect)</button><br>
             <button onclick="mod_oscript(3)" type="button">More complex, A</button><br>
-            <button onclick="mod_oscript(4)" type="button">More complex, B</button>
+            <button onclick="mod_oscript(4)" type="button">More complex, B</button><br>
+            <button onclick="mod_oscript(5)" type="button">Redeem script mode</button>
           </td>
           <td>
             <textarea id="rscript" name="redeem_script" cols="80" rows="15">
@@ -84,6 +85,7 @@
           <textarea id="rscript" name="script" cols="80" rows="15">
 # Enter the script you want serialized here
           </textarea>
+          <input type="submit", value="Serialize script">
       </form>
   </body>
 </html>
@@ -138,6 +140,11 @@ ac    # CHECKSIG`;
 # However, the AST printed by the analyser does present it more readable
 
 6352410460d353f4c834bccd1a0e690dc5b7a3c0e07f1ed916f05234ea539c08c0792f3ee90b7704a329e6e0a9e4cda2eb156ac6b1721f53a308d2bda2cce56efa925ddd210339c1817d51455acebcd4f6c0d0dcda537becf2d2ac34f4209cd31e28cab6d19552af6752410414c7ded5473ccaa019567b624e5f7425244b63e67695db39f69adab7b07dfc0c10d4b9e9d5ff3783a9c887f4f75b94d8a28d26cf630a54c66713ba6e77f38bc22102882b16fb1e677ed36d73c64db841dad33df045771596285988428f59a8e3e34652af68`;
+      break;
+    case 5:
+      document.getElementById("oscript").value = `OP_HASH160
+PUSH 1234567890123456789012345678901234567890
+88`;
       break;
     default:
       document.getElementById("oscript").value = `# Use '#' to start a comment

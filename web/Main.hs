@@ -12,6 +12,7 @@ import Network.HTTP.Simple
 import Network.HTTP.Conduit
 
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Lazy as BL
 
 import Data.Maybe
 
@@ -20,6 +21,7 @@ import Types
 
 import Views.Index
 import Lib
+import Cryptography
 
 blaze = html . renderHtml
 
@@ -38,7 +40,11 @@ main = do
                   then read verStr :: Int
                   else 1
       result <- case scriptClass oscrpt of
-                  Redeem rscrptHash -> liftIO $ analyseOpenScript rscrpt "/tmp/" "" ver
+                  Redeem rscrptHash ->
+                    let rHash = hash160 rscrpt
+                    in if BL.toStrict rHash == rscrptHash
+                        then liftIO $ analyseOpenScript rscrpt "/tmp/" "" ver
+                        else return $ Left "Error: hash in output script does not equal hash of redeem script!"
                   _ -> liftIO $ analyseOpenScript oscrpt "/tmp/" "" ver
       blaze $ renderAnalysis result
       liftIO $ putStrLn "---"

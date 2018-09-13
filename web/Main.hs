@@ -14,6 +14,9 @@ import Network.HTTP.Conduit
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Lazy as BL
 
+import qualified Data.ByteArray as BA
+import qualified Data.ByteArray.Encoding as BAE
+
 import Data.Maybe
 
 import Data.Bitcoin.Script
@@ -43,9 +46,10 @@ main = do
       result <- case scriptClass oscrpt of
                   Redeem rscrptHash ->
                     let rHash = hash160 rscrpt
-                    in if BL.toStrict rHash == rscrptHash
+                        rscrptHash' = BAE.convertToBase BAE.Base16 rscrptHash
+                    in if BL.toStrict rHash == rscrptHash'
                         then liftIO $ analyseOpenScript rscrpt "/tmp/" "" ver
-                        else return $ Left $ "Error: hash in output script does not equal hash of redeem script!\n\nHash inside output script: " ++ printBSInHex rscrptHash ++ "\nActual hash of redeem script: " ++ show rHash
+                        else return $ Left $ "Error: hash in output script does not equal hash of redeem script!\n\nHash inside output script: " ++ show rscrptHash' ++ "\nActual hash of redeem script: " ++ show rHash
                   _ -> liftIO $ analyseOpenScript oscrpt "/tmp/" "" ver
       blaze $ renderAnalysis result
       liftIO $ putStrLn "---"

@@ -12,7 +12,6 @@ hash256 = sha256 . sha256
 hash160 :: BS.ByteString -> BS.ByteString
 hash160 = ripemd160 . sha256
 
-
 sha256 :: BS.ByteString -> BS.ByteString
 sha256 bs =
   BS.fromStrict

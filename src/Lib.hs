@@ -32,6 +32,8 @@ import Constraints.Types
 import Constraints.ToProlog
 import Control.Monad
 
+import Script.Sugar
+
 import System.IO.Temp
 import qualified Control.Exception as E
 
@@ -39,13 +41,14 @@ type IOReport a = ExceptT String (WriterT String IO) a
 
 serializeScript :: String -> B.ByteString
 serializeScript =
-  parseMemnomicCodes
+  B.pack . unsugar
+{-  parseMemnomicCodes
   . B.pack
   . stripNewLines
   . translatePUSH
   . stripWhiteSpaces
   . stripComments
-
+-}
 analyseOpenScript :: B.ByteString -> String -> String -> Int -> IO (Either String String)
 analyseOpenScript scrpt dir preVerdict verbosity = do
   result <- E.catch ((runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))))

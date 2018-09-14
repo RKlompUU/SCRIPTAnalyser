@@ -6,6 +6,7 @@ import qualified Data.Data as TD
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BSB
+import qualified Data.ByteString.Lazy.Char8 as BS8L
 
 import Control.Monad.State.Lazy
 
@@ -57,6 +58,9 @@ replace (x,x') xs
 
 printBSInHex :: BS.ByteString -> String
 printBSInHex = show . BSB.toLazyByteString . BSB.byteStringHex
+
+hexBS2Str :: BS.ByteString -> String
+hexBS2Str = BS8L.unpack . BSB.toLazyByteString . BSB.byteStringHex
 
 tickCounter :: CounterState Int
 tickCounter = do

@@ -33,7 +33,7 @@ curl_close($ch);
 
 if (isset($error_msg))
 {
-  echo "Sorry, SCRIPT Analyser is temporarily disabled";
+  echo "Sorry, either SCRIPT Analyser is temporarily disabled or an internal error occured<br><br>";
 }
 else
 {

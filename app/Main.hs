@@ -54,8 +54,9 @@ main = do
   let preVerdict = fromMaybe "" (args !? 2)
 
   scrpt <- serializeScript <$> readStdin
-  putStrLn $ show scrpt
-  result <- analyseOpenScript scrpt dir preVerdict m
+  result <- case scrpt of
+              Left err -> return $ Left err
+              Right justScrpt -> analyseOpenScript justScrpt dir preVerdict m
   case result of
     Left err -> putStrLn err
     Right str -> putStrLn str

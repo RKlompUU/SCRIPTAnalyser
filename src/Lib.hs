@@ -39,16 +39,10 @@ import qualified Control.Exception as E
 
 type IOReport a = ExceptT String (WriterT String IO) a
 
-serializeScript :: String -> B.ByteString
-serializeScript =
-  B.pack . unsugar
-{-  parseMemnomicCodes
-  . B.pack
-  . stripNewLines
-  . translatePUSH
-  . stripWhiteSpaces
-  . stripComments
--}
+serializeScript :: String -> Either String B.ByteString
+serializeScript str =
+  B.pack <$> unsugar str
+
 analyseOpenScript :: B.ByteString -> String -> String -> Int -> IO (Either String String)
 analyseOpenScript scrpt dir preVerdict verbosity = do
   result <- E.catch ((runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))))
@@ -56,41 +50,9 @@ analyseOpenScript scrpt dir preVerdict verbosity = do
   case result of
     (Left err,str) -> return $ Left ("Error: " ++ err)
     (Right _,str) -> return $ Right str
---(preVerdict ++ "parse errors: " ++ replaceX ('\n',' ') (show (e :: E.ErrorCall)))
-
-stripComments :: String -> String
-stripComments bs = reverse . snd
-                 $ foldl walker (False,[]) bs
-  where walker :: (Bool, String) -> Char -> (Bool, String)
-        walker (False, bs') '#' = (True, bs')
-        walker (False, bs') c   = (False, c : bs')
-        walker (True, bs') '\n' = (False, '\n' : bs')
-        walker (True, bs') _    = (True, bs')
-
--- Except newline
-stripWhiteSpaces :: String -> String
-stripWhiteSpaces =
-  filter (\c -> not $ any (== c) [' ','\t','\r'])
-
-stripNewLines :: String -> String
-stripNewLines =
-  filter (/= '\n')
-
-translatePUSH :: String -> String
-translatePUSH [] = []
-translatePUSH scrpt =
-  let push = "PUSH"
-      scrpt_ = take (length push) scrpt
-      scrpt__ = drop (length push) scrpt
-  in case (if scrpt_ == push then Just undefined else Nothing) >> findIndex (== '\n') scrpt__ of
-      Just i  -> ((B.unpack . BS16L.encode . BSL.singleton) (toEnum (div i 2) :: Word8)) ++
-                 (take i scrpt__) ++ translatePUSH (drop i scrpt__)
-      Nothing -> head scrpt : translatePUSH (tail scrpt)
 
 analyseOpenScript_ :: B.ByteString -> String -> String -> Int -> IOReport ()
 analyseOpenScript_ bs dir preVerdict verbosity = do
-  when (verbosity >= 3) $ do
-    tell $ show bs ++ "\n"
   let script = decode bs
 
   let ast = runFillLabels $ buildAST (scriptOps script)

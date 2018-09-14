@@ -14,9 +14,12 @@ import KlompStandard
 
 type SParser a = Parser Char a
 
-unsugar :: String -> String
+unsugar :: String -> Either String String
 unsugar str =
-  fst $ head $ parse sugarsParser str
+  let res = parse sugarsParser str
+  in if null res
+      then Left "Failed to parse script"
+      else Right $ fst $ head $ res
 
 sugarsParser :: SParser String
 sugarsParser =

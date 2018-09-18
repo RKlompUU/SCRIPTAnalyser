@@ -1,14 +1,17 @@
-module Script.Sugar (unsugar) where
+module Script.Sugar (unsugar, hexInt) where
 
 import Prelude hiding ((<$>), (<*), (*>), (<*>))
 
 import ParseLib.Simple
 import qualified Data.ByteString.Base16.Lazy as BS16L
 import qualified Data.ByteString.Lazy        as BSL
+import qualified Data.ByteString.Lazy.Char8  as BS8LC
 import Data.Bitcoin.Script hiding (decode)
 import Data.Binary (decode)
 
 import Numeric (showHex)
+
+import Bitcoin.Script.Integer (asByteString)
 
 import KlompStandard
 
@@ -34,7 +37,7 @@ atom =
 
 push :: SParser String
 push =
-  pushit . concat <$> (token "PUSH" *> stripwhite *> many byte)
+  pushit <$> (token "PUSH" *> stripwhite *> num)
   where pushit bytes
           | numBytes <= 75 = numOp ++ bytes
           | numBytes > 75 && numBytes <= 256 = "4c" ++ numOp ++ bytes
@@ -45,6 +48,11 @@ push =
                         in if odd (length str)
                             then "0" ++ str
                             else str
+
+num :: SParser String
+num =
+  int
+  <|> concat <$> many byte
 
 comment :: SParser String
 comment =
@@ -57,6 +65,14 @@ opKeyword =
 byte :: SParser String
 byte =
   (\a b -> [a,b]) <$> satisfy isHexChar <*> satisfy isHexChar
+
+int :: SParser String
+int =
+  hexInt <$> (symbol 'i' *> integer)
+
+hexInt :: Int -> String
+hexInt i =
+  hexBS2Str $ asByteString (fromIntegral i)
 
 isHexChar :: Char -> Bool
 isHexChar c

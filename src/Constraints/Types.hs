@@ -67,6 +67,8 @@ instance Show Expr where
     "Sig (" ++ show e1 ++ ") (" ++ show e2 ++ ")"
   show (MultiSig e1s e2s) =
     "MultiSig " ++ show e1s ++ " " ++ show e2s
+  show (Var 1) =
+    "blockNum or timestamp"
   show (Var i) =
     "X_" ++ show i
   show (Op e1 op e2) =

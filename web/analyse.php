@@ -1,5 +1,11 @@
 <?php
 
+if ($_SERVER['SERVER_NAME'] === 'www.cs.stir.ac.uk')
+{
+  header("Location: https://vm100.cs.stir.ac.uk/~rkl/analyse.php?" . $_SERVER['QUERY_STRING']);
+  die();
+}
+
 $explanation = <<<XYZ
 <br>
 <h2>Explanation of output</h2>

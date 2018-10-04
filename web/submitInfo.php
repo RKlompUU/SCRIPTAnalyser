@@ -1,5 +1,11 @@
 <?php
 
+if ($_SERVER['SERVER_NAME'] === 'www.cs.stir.ac.uk')
+{
+  header("Location: https://vm100.cs.stir.ac.uk/~rkl/submitInfo.php?" . $_SERVER['QUERY_STRING']);
+  die();
+}
+
 $request = "139.153.253.238:3000/submitInfo?"
          . "name=" . urlencode($_GET["name"])
          . "&email=" . urlencode($_GET["email"])

@@ -40,14 +40,16 @@ push =
   pushit <$> (token "PUSH" *> stripwhite *> num)
   where pushit bytes
           | numBytes <= 75 = numOp ++ bytes
-          | numBytes > 75 && numBytes <= 256 = "4c" ++ numOp ++ bytes
-          | numBytes > 256 && numBytes <= 2^16 = "4d" ++ numOp ++ bytes
-          | numBytes > 2^16 = "4e" ++ numOp ++ bytes
+          | numBytes > 75 && numBytes < 256 = "4c" ++ numOp ++ bytes
+          | numBytes >= 256 && numBytes < 2^16 = "4d" ++ numOp ++ bytes
+          | numBytes >= 2^16 = "4e" ++ numOp ++ bytes
           where numBytes = div (length bytes) 2
                 numOp = let str = showHex numBytes ""
-                        in if odd (length str)
-                            then "0" ++ str
-                            else str
+                            str' = if odd (length str)
+                                    then "0" ++ str
+                                    else str
+                        in concat . reverse
+                           $ map (\i -> take 2 $ drop (i*2) str') [0..length str' `div` 2]
 
 num :: SParser String
 num =

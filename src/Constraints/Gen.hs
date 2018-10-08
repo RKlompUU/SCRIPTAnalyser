@@ -258,6 +258,11 @@ stModOp OP_SIZE = do
   addCnstr (C_Spec link)
 stModOp OP_NOT = popStack >>= \v -> (uncurry pushStack) (annotTy (Not v))
 
+stModOp OP_0NOTEQUAL = do
+  v <- popStack
+  tySet v int
+  pushStack (Op v "/=" (ConstInt 0)) bool
+
 stModOp OP_1ADD = do
   v <- popStack
   tySet v int
@@ -279,8 +284,18 @@ stModOp OP_ADD = opStack "+"
 stModOp OP_SUB = opStack "-"
 stModOp OP_BOOLAND = opStack "/\\"
 stModOp OP_BOOLOR = opStack "\\/"
-stModOp OP_NUMEQUAL = opStack "=="
-stModOp OP_NUMNOTEQUAL = opStack "/="
+stModOp OP_NUMEQUAL = do
+  v_2 <- popStack
+  v_1 <- popStack
+  tySet v_1 int
+  tySet v_2 int
+  pushStack (Op v_1 "==" v2) bool
+stModOp OP_NUMNOTEQUAL = do
+    v_2 <- popStack
+    v_1 <- popStack
+    tySet v_1 int
+    tySet v_2 int
+    pushStack (Op v_1 "/=" v2) bool
 stModOp OP_LESSTHAN = opStack ">"
 stModOp OP_GREATERTHAN = opStack "<"
 stModOp OP_LESSTHANOREQUAL = opStack ">="

@@ -106,7 +106,7 @@ genAltV = do
   st <- get
   let v = AltVar (freshAltV st)
   put $ st {freshAltV = freshAltV st - 1}
-  
+
   tySet v top
   return v
 
@@ -258,12 +258,11 @@ stModOp OP_SIZE = do
   tySet link bool
   addCnstr (C_Spec link)
 stModOp OP_NOT = popStack >>= \v -> (uncurry pushStack) (annotTy (Not v))
-{-
-stModOp OP_1ADD = popStack >>= \v -> pushStack (Op v "+" (ConstInt 1))
-stModOp OP_1SUB = popStack >>= \v -> pushStack (Op v "-" (ConstInt 1))
-stModOp OP_NEGATE = popStack >>= \v -> pushStack (Op v "*" (ConstInt (-1)))
-stModOp OP_ABS = popStack >>= \v -> pushStack (Abs v)
--}
+stModOp OP_1ADD = popStack >>= \v -> (uncurry pushStack) (annotTy (Op v "+" (ConstInt 1)))
+stModOp OP_1SUB = popStack >>= \v -> (uncurry pushStack) (annotTy (Op v "-" (ConstInt 1)))
+stModOp OP_NEGATE = popStack >>= \v -> (uncurry pushStack) (annotTy (Op v "*" (ConstInt (-1))))
+stModOp OP_ABS = popStack >>= \v -> (uncurry pushStack) (annotTy (Abs v))
+
 
 stModOp OP_ADD = opStack "+"
 stModOp OP_SUB = opStack "-"

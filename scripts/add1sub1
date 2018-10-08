@@ -1,0 +1,6 @@
+# Expected verdict: nonredeemable
+# Reason: 0 + 1 - 1 is always 0
+
+PUSH i0
+OP_1ADD
+OP_1SUB

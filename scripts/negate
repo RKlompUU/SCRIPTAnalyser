@@ -1,0 +1,13 @@
+# Expected verdict: nonredeemable
+# Reason: Constraints {X_0 > 100, and (X_0 * (-1) > 100)} cannot be satisfied
+
+OP_DUP
+
+PUSH i100
+OP_GREATERTHAN
+OP_VERIFY
+
+OP_NEGATE
+
+PUSH i100
+OP_GREATERTHAN

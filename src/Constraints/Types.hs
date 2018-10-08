@@ -40,6 +40,8 @@ data Expr where
 
   BigInt :: Expr -> Expr
 
+  Abs :: Expr -> Expr
+
   Var   :: Ident -> Expr
   AltVar   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
@@ -62,6 +64,8 @@ instance Show Expr where
     "Not (" ++ show e ++ ")"
   show (Length e) =
     "Length (" ++ show e ++ ")"
+  show (Abs e) =
+    "Abs (" ++ show e ++ ")"
   show (Hash e i) =
     "Hash_" ++ show i ++ " (" ++ show e ++ ")"
   show (Sig e1 e2) =
@@ -109,13 +113,22 @@ atom2Bool (ConstBS bs) =
   case convert2Int (ConstBS bs) of
     Just (ConstInt 0) -> False
     _      -> True
+atom2Bool (Abs e) =
+  atom2Bool e
 
 atom2BS :: Expr -> BS.ByteString
 atom2BS ETrue = BS.pack [0x01]
 atom2BS EFalse = BS.empty
 atom2BS (ConstInt i) = asByteString (fromIntegral i)
 atom2BS (ConstBS bs) = bs
-
+{-
+atom2BS (Abs e) =
+  let i  = e2i e
+      i' = if i < 0
+            then i * (-1)
+            else i
+  in asByteString (fromIntegral i')
+-}
 
 lazy2StrictBS :: BSL.ByteString -> BS.ByteString
 lazy2StrictBS =
@@ -125,6 +138,11 @@ convert2Int :: Expr -> Maybe Expr
 convert2Int (ConstInt i) = Just $ ConstInt i
 convert2Int (ConstBS bs)
   | BS.length bs <= 4 = ConstInt <$> return (fromIntegral $ asInteger bs)
+{-
+convert2Int (Abs e) =
+  convert2Int e >>= \i -> case i of
+                            (ConstInt i') -> Just $ ConstInt (if i' < 0 then i' * (-1) else i')
+                            _             -> Nothing -}
 convert2Int _ = Nothing
 
 tryConvert2Int :: Expr -> Expr
@@ -240,11 +258,16 @@ annotTy ETrue =
   (ETrue, true)
 annotTy EFalse =
   (EFalse, false)
+annotTy e@(Abs _) =
+  (e, int { intRanges = [R.SpanRange 0 maxN] })
 annotTy e@(Not _) =
   (e, bool)
 annotTy e@(Op _ op _)
   | any (==op) (cmpOps ++ boolOps) =
     (e, bool)
+annotTy e@(Op _ op _)
+  | any (==op) (numOps) =
+    (e, bint)
 annotTy e =
   error $ "annotTy not implemented (yet) for " ++ show e
 
@@ -253,7 +276,7 @@ cmpOps =
 boolOps =
   ["/\\","\\/"]
 numOps =
-  ["+","-"]
+  ["+","-","*"]
 
 opTys :: OpIdent -> BranchBuilder ((Ty -> Ty),(Ty -> Ty),Ty)
 opTys "<"   = return $ (toInt,toInt,bool)
@@ -264,6 +287,7 @@ opTys "/\\" = return $ (toInt,toInt,bool)
 opTys "\\/" = return $ (toInt,toInt,bool)
 opTys "+"   = return $ (toInt,toInt,bint) -- bint because of possible over/underflow
 opTys "-"   = return $ (toInt,toInt,bint) -- bint because of possible over/underflow
+opTys "*"   = return $ (toInt,toInt,bint) -- bint because of possible over/underflow
 
 tySet :: Expr -> Ty -> BranchBuilder ()
 tySet e t' = do
@@ -379,6 +403,8 @@ initialTypes = M.fromList [(EFalse,false),
                            (Hex "0000FFFF",int),
                            annotTy (ConstInt 22),
                            annotTy (ConstInt 31),
+                           annotTy (ConstInt 1),
+                           annotTy (ConstInt (-1)),
                            (Not (Op (Op (Var 2) "&" (Hex "00400000")) ">>" (ConstInt 22)),bool)]--(Var 2,int)]
 postCnstrs = [C_Spec (Op (Op (Var 2) "&" (Hex "00400000")) ">>" (ConstInt 22)),
               C_Spec (Op (Var 2) "&" (Hex "0000FFFF"))]

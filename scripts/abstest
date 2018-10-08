@@ -1,0 +1,8 @@
+# Expected verdict: nonredeemable
+# Reason: Constraint {Abs (Y_0) < 0} cannot be satisfied
+
+OP_FROMALTSTACK
+OP_ABS
+
+PUSH i0
+OP_LESSTHAN

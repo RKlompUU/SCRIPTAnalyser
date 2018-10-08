@@ -1,0 +1,12 @@
+# This should reach a nonredeemable conclusion
+#
+# Y_0 > 105 ^ Y_0 < 50 is unsolvable
+
+
+OP_FROMALTSTACK
+OP_DUP
+PUSH i105
+OP_GREATERTHAN
+OP_VERIFY
+PUSH i50
+OP_LESSTHAN

@@ -236,13 +236,13 @@ stModOp OP_OVER = do
   v1 <- popStack
   pushsStack_ [v1,v2,v1]
 stModOp OP_PICK = do
-  n <- e2i <$> popStack
+  n <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
   es <- popsStack (n-1)
   e_n <- popStack
   pushsStack_ (e_n : es)
   pushStack_ e_n
 stModOp OP_ROLL = do
-  n <- e2i <$> popStack
+  n <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
   es <- popsStack (n-1)
   e_n <- popStack
   pushsStack_ es
@@ -336,6 +336,8 @@ stModOp OP_MAX = do
   tySet v_1 int
   pushStack (Max v_1 v_2) int
 
+stModOp OP_RIPEMD160 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 20))
+stModOp OP_SHA1 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 20))
 stModOp OP_HASH160 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 20))
 stModOp OP_HASH256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
 stModOp OP_SHA256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))
@@ -359,6 +361,7 @@ stModOp OP_CHECKMULTISIG = do
   popStack -- Due to a bug in the Bitcoin implementation :)
   pushStack (MultiSig ks_s ks_p) bool
 
+stModOp OP_CODESEPARATOR = return ()
 stModOp OP_NOP1 = return ()
 stModOp OP_NOP4 = return ()
 stModOp OP_NOP5 = return ()
@@ -486,5 +489,12 @@ disabledOps =
   OP_LSHIFT,
   OP_RSHIFT,
 
+  OP_VER,
+  OP_RESERVED,
+
+   -- TODO: If one of the following operations are present,
+   --       it should make the ENTIRE script incorrect
+   --       (not just the execution branch it is in)
+  OP_VERNOTIF,
   OP_VERIF
   ]

@@ -33,8 +33,6 @@ readStdin = do
       lines <- readStdin
       return $ line ++ ('\n' : lines)
 
--- If nonredeemable, exit code = failure
--- If redeemable or requires prolog to determine this (which is not yet implemented), exit code = success
 main :: IO ()
 main = do
   args <- getArgs

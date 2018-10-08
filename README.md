@@ -7,7 +7,7 @@ SCRIPT Analyser is a tool that infers from a given _output_ script the constrain
 - X\_0 must be a correct hash pre-image of the constant value present in the output script
 - X\_-1 must be a correct signature (signing the public key X\_0 plus the transaction)
 
-The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. Note, not all SCRIPT operations are supported yet.
+The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. The tool supports the entire SCRIPT language. However, the only limitation currently is that the integers popped in OP_ROLL, OP_PICK and OP_CHECKMULTISIG that specify the operation's behavior are expected to be constant ints in the output script.
 
 Try it out online at: https://vm100.cs.stir.ac.uk/~rkl/home.html
 

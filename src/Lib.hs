@@ -126,8 +126,10 @@ dumpBranchReport report verbosity =
             $ map showJump (reverse $ branchInfo bs)
       trace = "Stack trace:\n\t" ++
               (intercalate "\n\t" $ map show (reverse $ muts bs))
-      initialStack = "Required initial stack:\n" ++
+      initialStack = "Required initial main stack:\n" ++
                      printStack (map Var [0,(-1)..freshV bs+1])
+      initialAltStack = "Required initial alternative stack:\n" ++
+                        printStack (map AltVar [0,(-1)..freshAltV bs+1])
       vconstrs = "Inferred constraints:\n\t" ++
                  (intercalate "\n\t" $ map show (filter (not . isSpecCnstr) $ val_cnstrs bs))
       tconstrs = "Inferred types:\n\t" ++
@@ -149,16 +151,8 @@ dumpBranchReport report verbosity =
      "Branch's decision points:\n" ++
      (if (not . null) jumps then "\t-> " ++ jumps else "") ++ "\n" ++
      initialStack ++
+     initialAltStack ++
      vconstrs ++
      (if verbosity >= 2 then "\n" ++ tconstrs ++ "\n" ++ trace else "") ++ "\n" ++
      st ++ "\n" ++
      prolog ++ "\n"
-
-
-printStack :: Show a => [a] -> String
-printStack [] = "head -> |------------------|\n"
-printStack (x:xs) =
-  let sep = "\t|------------------|\n"
-      xs' = concatMap (\e -> "\t| " ++ show e ++ "\n") xs
-      x'  = "head -> | " ++ show x ++ "\n"
-  in sep ++ x' ++ xs' ++ sep

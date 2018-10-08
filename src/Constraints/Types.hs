@@ -41,6 +41,7 @@ data Expr where
   BigInt :: Expr -> Expr
 
   Var   :: Ident -> Expr
+  AltVar   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Eq,Ord,T.Typeable,TD.Data)
 
@@ -70,7 +71,9 @@ instance Show Expr where
   show (Var 1) =
     "blockNum or timestamp"
   show (Var i) =
-    "X_" ++ show i
+    "X_(" ++ show i ++ ")"
+  show (AltVar i) =
+    "Y_(" ++ show i ++ ")"
   show (Op e1 op e2) =
     "(" ++ show e1 ++ ") " ++ op ++ " (" ++ show e2 ++ ")"
 
@@ -326,9 +329,9 @@ data BuildState =
     freshV     :: Ident,
     nTy        :: Ident,
     branchInfo :: [(Label,Bool)],
-    muts       :: [BranchMutation]
---    altStack  :: Stack,   Alststack ignored for now
---    freshAltV :: Ident,   Alststack ignored for now
+    muts       :: [BranchMutation],
+    altStack  :: Stack,
+    freshAltV :: Ident
   }
 initBuildState =
   BuildState {
@@ -338,7 +341,9 @@ initBuildState =
     branchInfo = [],
     freshV     = 0,
     nTy        = 0,
-    muts       = []
+    muts       = [],
+    altStack   = [],
+    freshAltV  = 0
   }
 
 data BranchReport =
@@ -456,8 +461,16 @@ instance Show BranchMutation where
 instance Show BuildState where
   show s = "BuildState {\n\tty_cnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (M.toList $ ty_cnstrs s))) ++
             "\n\tval_cnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (val_cnstrs s))) ++
-           ",\n\tstack: " ++ show (stack s) ++
-          -- ",\n\taltStack: " ++ show (altStack s) ++
+           ",\n\tstack:{\n" ++ printStack (stack s) ++ "}" ++
+           ",\n\taltStack:{\n" ++ show (altStack s) ++ "}" ++
            ",\n\tbranch history:\n\t.. " ++
-           intercalate "\n\t.. " (map show $ (reverse $ muts s)) ++
-           "}\n"
+           intercalate "\n\t.. " (map show $ (reverse $ muts s))
+
+
+printStack :: Show a => [a] -> String
+printStack [] = "head -> |------------------|\n"
+printStack (x:xs) =
+  let sep = "\t|------------------|\n"
+      xs' = concatMap (\e -> "\t| " ++ show e ++ "\n") xs
+      x'  = "head -> | " ++ show x ++ "\n"
+  in sep ++ x' ++ xs' ++ sep

@@ -101,12 +101,14 @@ opStack op = do
 --
 -- Alternative stack operations
 --
-{- Alststack ignored for now
 genAltV :: BranchBuilder Expr
 genAltV = do
   st <- get
+  let v = AltVar (freshAltV st)
   put $ st {freshAltV = freshAltV st - 1}
-  return $ Var (freshAltV st)
+  
+  tySet v top
+  return v
 
 popAltStack :: BranchBuilder Expr
 popAltStack = do
@@ -122,10 +124,6 @@ pushAltStack :: Expr -> BranchBuilder ()
 pushAltStack e = do
   st <- get
   put $ st {altStack = e : altStack st}
-
-pushsAltStack :: [Expr] -> BranchBuilder ()
-pushsAltStack es = mapM_ pushAltStack es
--}
 
 --
 -- Main constraint generation functions
@@ -207,14 +205,9 @@ stModOp OP_VERIFY = do
   addCnstr (C_IsTrue v)
 stModOp OP_RETURN = tySubst true false >> return () -- i.e. make current branch invalid
 
-{-
-stModOp OP_TOALTSTACK = do
-  v <- popStack
-  pushAltStack v
-stModOp OP_FROMALTSTACK = do
-  v <- popAltStack
-  pushStack v
--}
+stModOp OP_TOALTSTACK = popStack >>= pushAltStack
+stModOp OP_FROMALTSTACK = popAltStack >>= pushStack_
+
 stModOp OP_DEPTH = do
   depth <- length . stack <$> get
   pushStack (ConstInt depth) int

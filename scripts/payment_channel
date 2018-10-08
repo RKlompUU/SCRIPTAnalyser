@@ -1,5 +1,7 @@
 # source: https://medium.com/@maraoz/smart-contracts-and-bitcoin-a5d61011d9b1
 # Accessed on 3 Oct 2018
+#
+# This is a *fixed version*
 
 OP_IF
   PUSH i700000 # Expiration: block number 700,000

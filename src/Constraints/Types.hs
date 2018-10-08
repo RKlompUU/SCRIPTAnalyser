@@ -46,6 +46,7 @@ data Expr where
   Abs :: Expr -> Expr
 
   Var   :: Ident -> Expr
+  AVar  :: Ident -> Expr
   AltVar   :: Ident -> Expr
   Op    :: Expr -> OpIdent -> Expr -> Expr
   deriving (Eq,Ord,T.Typeable,TD.Data)
@@ -85,6 +86,8 @@ instance Show Expr where
     "X_(" ++ show i ++ ")"
   show (AltVar i) =
     "Y_(" ++ show i ++ ")"
+  show (AVar i) =
+    "Z_(" ++ show i ++ ")"
   show (Op e1 op e2) =
     "(" ++ show e1 ++ ") " ++ op ++ " (" ++ show e2 ++ ")"
 
@@ -362,7 +365,8 @@ data BuildState =
     branchInfo :: [(Label,Bool)],
     muts       :: [BranchMutation],
     altStack  :: Stack,
-    freshAltV :: Ident
+    freshAltV :: Ident,
+    freshAV   :: Ident
   }
 initBuildState =
   BuildState {
@@ -374,7 +378,8 @@ initBuildState =
     nTy        = 0,
     muts       = [],
     altStack   = [],
-    freshAltV  = 0
+    freshAltV  = 0,
+    freshAV    = 0
   }
 
 data BranchReport =

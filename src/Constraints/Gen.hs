@@ -48,6 +48,14 @@ genV = do
   tySet v top
   return $ v
 
+genArbitraryV :: BranchBuilder Expr
+genArbitraryV = do
+  st <- get
+  let v = AVar (freshAV st)
+  put $ st {freshAV = freshAV st - 1}
+  tySet v top
+  return $ v
+
 popStack :: BranchBuilder Expr
 popStack = do
   st <- get
@@ -210,9 +218,15 @@ stModOp OP_FROMALTSTACK = popAltStack >>= pushStack_
 
 stModOp OP_DEPTH = do
   depth <- length . stack <$> get
-  pushStack (ConstInt depth) int
+  (uncurry tySet) (annotTy (ConstInt depth))
+  v <- genArbitraryV
+  tySet v int
+  let depthCnstr = Op v ">=" (ConstInt depth)
+  tySet depthCnstr bool
+  addCnstr (C_IsTrue depthCnstr)
 stModOp OP_DROP = popStack >> return ()
 stModOp OP_DUP = popStack >>= \v -> pushsStack_ [v,v]
+-- OP_IFDUP supported via the parser (see src/Script/Parser.y)
 stModOp OP_NIP = do
   v <- popStack
   popStack
@@ -289,13 +303,13 @@ stModOp OP_NUMEQUAL = do
   v_1 <- popStack
   tySet v_1 int
   tySet v_2 int
-  pushStack (Op v_1 "==" v2) bool
+  pushStack (Op v_1 "==" v_2) bool
 stModOp OP_NUMNOTEQUAL = do
     v_2 <- popStack
     v_1 <- popStack
     tySet v_1 int
     tySet v_2 int
-    pushStack (Op v_1 "/=" v2) bool
+    pushStack (Op v_1 "/=" v_2) bool
 stModOp OP_LESSTHAN = opStack ">"
 stModOp OP_GREATERTHAN = opStack "<"
 stModOp OP_LESSTHANOREQUAL = opStack ">="

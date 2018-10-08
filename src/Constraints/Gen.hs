@@ -250,7 +250,6 @@ stModOp OP_2OVER = popsStack 4 >>= \vs -> pushsStack_ (vs ++ drop 2 vs)
 stModOp OP_2ROT = popsStack 6 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 stModOp OP_2SWAP = popsStack 4 >>= \vs -> pushsStack_ (drop 2 vs ++ take 2 vs)
 
-
 stModOp OP_SIZE = do
   v <- peakStack
   (uncurry pushStack) (annotTy (Length v))
@@ -258,11 +257,23 @@ stModOp OP_SIZE = do
   tySet link bool
   addCnstr (C_Spec link)
 stModOp OP_NOT = popStack >>= \v -> (uncurry pushStack) (annotTy (Not v))
-stModOp OP_1ADD = popStack >>= \v -> (uncurry pushStack) (annotTy (Op v "+" (ConstInt 1)))
-stModOp OP_1SUB = popStack >>= \v -> (uncurry pushStack) (annotTy (Op v "-" (ConstInt 1)))
-stModOp OP_NEGATE = popStack >>= \v -> (uncurry pushStack) (annotTy (Op v "*" (ConstInt (-1))))
-stModOp OP_ABS = popStack >>= \v -> (uncurry pushStack) (annotTy (Abs v))
 
+stModOp OP_1ADD = do
+  v <- popStack
+  tySet v int
+  pushStack (Op v "+" (ConstInt 1)) int
+stModOp OP_1SUB = do
+  v <- popStack
+  tySet v int
+  pushStack (Op v "-" (ConstInt 1)) int
+stModOp OP_NEGATE = do
+  v <- popStack
+  tySet v int
+  pushStack (Op v "*" (ConstInt (-1))) int
+stModOp OP_ABS = do
+  v <- popStack
+  tySet v int
+  pushStack (Abs v) int
 
 stModOp OP_ADD = opStack "+"
 stModOp OP_SUB = opStack "-"
@@ -283,17 +294,18 @@ stModOp OP_WITHIN = do
   (uncurry pushStack) (annotTy (Op v_1 "<" v_3))
   opStack "/\\"
 
-{-
 stModOp OP_MIN = do
   v_2 <- popStack
   v_1 <- popStack
-  pushStack (Min v_1 v_2)
+  tySet v_2 int
+  tySet v_1 int
+  pushStack (Min v_1 v_2) int
 stModOp OP_MAX = do
   v_2 <- popStack
   v_1 <- popStack
-  pushStack (Max v_1 v_2)
--}
-
+  tySet v_2 int
+  tySet v_1 int
+  pushStack (Max v_1 v_2) int
 
 stModOp OP_HASH160 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 20))
 stModOp OP_HASH256 = popStack >>= \v -> (uncurry pushStack) (annotTy (Hash v 32))

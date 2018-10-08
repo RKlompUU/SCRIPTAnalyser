@@ -32,6 +32,9 @@ data Expr where
   ETrue    :: Expr
   Not :: Expr -> Expr
 
+  Min :: Expr -> Expr -> Expr
+  Max :: Expr -> Expr -> Expr
+
   Length :: Expr -> Expr
 
   Hash :: Expr -> Int -> Expr
@@ -60,6 +63,10 @@ instance Show Expr where
     "False"
   show ETrue =
     "True"
+  show (Min e1 e2) =
+    "Min (" ++ show e1 ++ ") (" ++ show e2 ++ ")"
+  show (Max e1 e2) =
+    "Max (" ++ show e1 ++ ") (" ++ show e2 ++ ")"
   show (Not e) =
     "Not (" ++ show e ++ ")"
   show (Length e) =

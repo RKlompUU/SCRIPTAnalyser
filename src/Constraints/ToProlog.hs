@@ -115,6 +115,8 @@ esInE e@(Length e1) = e : esInE e1
 esInE e@(Not e1) = e : esInE e1
 esInE e@(BigInt e') = e : esInE e'
 esInE e@(Abs e') = e : esInE e'
+esInE e@(Min e1 e2) = e : esInE e1 ++ esInE e2
+esInE e@(Max e1 e2) = e : esInE e1 ++ esInE e2
 esInE e = [e]
 
 contradiction :: PrologWriter ()
@@ -186,6 +188,24 @@ e2Prolog e@(Abs e') = do
 
   {- Don't have to enforce that tyIPL t is >= 0, this is already enforced by its
      initially assigned type (in annotTy) -}
+e2Prolog e@(Min e1 e2) = do
+  t1 <- askTy e1
+  t2 <- askTy e2
+  t <- askTy e
+
+  e2Prolog e1
+  e2Prolog e2
+
+  plFact $ tyIPL t ++ " #= min(" ++ tyIPL t1 ++ "," ++ tyIPL t2 ++ ")"
+e2Prolog e@(Max e1 e2) = do
+  t1 <- askTy e1
+  t2 <- askTy e2
+  t <- askTy e
+
+  e2Prolog e1
+  e2Prolog e2
+
+  plFact $ tyIPL t ++ " #= max(" ++ tyIPL t1 ++ "," ++ tyIPL t2 ++ ")"
 e2Prolog e@(Not e') = do
   t <- askTy e
   t' <- askTy e'

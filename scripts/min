@@ -1,0 +1,11 @@
+# Expected verdict: nonredeemable
+# Reason: unsatisfiable constraints {X_0 == 5   ^   MIN(X_0,0) != 0}
+
+OP_DUP
+
+PUSH i0
+OP_MIN
+OP_VERIFY
+
+PUSH i5
+OP_EQUAL

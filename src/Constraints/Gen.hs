@@ -397,14 +397,28 @@ stModOp OP_CHECKMULTISIG = do
                 case r of
                   Left err -> failBranch err
                   Right i -> return i
-  popStack -- the n_pubs
+  e_npub <- popStack -- the n_pubs
+  let n_pubsExpr = ConstInt n_pubs
+      npubCnstr = Op e_npub "==" n_pubsExpr
+
+  tySet npubCnstr bool
+  (uncurry tySet) (annotTy n_pubsExpr)
+
+  addCnstr (C_IsTrue npubCnstr)
+
   ks_pub <- popsStack n_pubs
 
   e_nprivs <- popStack
   n_privs <-
     case convert2Int e_nprivs of
       Just (ConstInt i) -> return i
-      Nothing -> return 1 -- When n_privs can be chosen by the input script, it can always be set to the minimal 1
+      Nothing -> do
+        let nprivConstant = ConstInt 1
+            nprivCnstr = Op e_nprivs "==" nprivConstant
+        addCnstr (C_IsTrue nprivCnstr)
+        tySet nprivCnstr bool
+        (uncurry tySet) (annotTy nprivConstant)
+        return 1 -- When n_privs can be chosen by the input script, it can always be set to the minimal 1
 
   ks_priv <- popsStack n_privs
   popStack -- Due to a bug in the Bitcoin core implementation

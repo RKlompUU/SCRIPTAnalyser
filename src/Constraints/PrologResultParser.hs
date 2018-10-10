@@ -8,7 +8,7 @@ parsePrologResult :: String -> String -> Either String Int
 parsePrologResult var r =
   let res = parse (prologResult var) r
   in if null res
-      then Left "Failed to parse script"
+      then Left ("Failed to parse prolog result: " ++ r)
       else Right $ fst $ head $ res
 
 type PLRParser a = Parser Char a

@@ -20,7 +20,7 @@ prologSolve var pl = do
 
   liftIO $ writeFile fn pl
 
-  let str = "s(" ++ var ++ ")."
+  let str = "s(" ++ var ++ "), indomain(" ++ var ++ ")."
   (c,r,e) <- liftIO $ readProcessWithExitCode "/usr/bin/swipl" [fn] str
   let solution = parsePrologResult var r
 

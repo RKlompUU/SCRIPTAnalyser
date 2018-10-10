@@ -354,12 +354,45 @@ stModOp OP_CHECKSIG = do
   -- tySet v_2 pkTy
   pushStack (Sig v_1 v_2) bool
 stModOp OP_CHECKMULTISIG = do
-  n_p  <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
-  ks_p <- popsStack n_p
+  e_npubs <- popStack
+  n_pubs <-
+    case e_npubs of
+      (Var x) -> do
+        {-
+         - In this case n_pubs must be specified by the input script, however,
+         - it may still be constrained by the subsequent set of public keys.
+         - Thus, in this case the stack is inspected to find the position where
+         - e_nprivs resides, and anything up to but not including this position
+         - is a public key if the output script is redeemable.
+         -}
+        st <- stack <$> get
+        return $ fromJust
+               $ findIndex isNonPub (st ++ [ConstInt 0])
+        where isNonPub e =
+
+
+      _ -> case convert2Int e_npubs of
+            Just (ConstInt i) -> return i
+            Nothing -> do
+              {-
+               - In this case e_npubs does not belong to the atom expressions,
+               - Which means we need a constraint solver to find a minimum
+               - solution.
+               -}
+              st <- get
+              error "TODO"
+  ks_pub <- popsStack n_pubs
+
+  e_nprivs <- popStack
+  n_privs <-
+    case convert2Int e_nprivs of
+      Just (ConstInt i) -> return i
+      Nothing -> return 1 -- When n_privs can be chosen by
+
   n_s  <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
-  ks_s <- popsStack n_s
+  ks_priv <- popsStack n_privs
   popStack -- Due to a bug in the Bitcoin implementation :)
-  pushStack (MultiSig ks_s ks_p) bool
+  pushStack (MultiSig ks_priv ks_pub) bool
 
 stModOp OP_CODESEPARATOR = return ()
 stModOp OP_NOP1 = return ()

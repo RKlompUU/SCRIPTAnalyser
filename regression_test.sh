@@ -12,11 +12,11 @@ for input in scripts/*; do
 
   SCRIPTAnalyser-exe < "$input" > $output
 
-  if [ `cmp --silent "$cmp" "$output"` ];
+  if cmp --silent "$cmp" "$output"
   then
+    mv -v "$output" "$cmp"
+  else
     echo "files differ"
     kdiff3 "$cmp" "$output" &
-  else
-    mv -v "$output" "$cmp"
   fi
 done

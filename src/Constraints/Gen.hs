@@ -17,6 +17,7 @@ import Data.Maybe
 
 import Bitcoin.Script.Integer
 import Constraints.Types
+import Constraints.ToProlog
 
 import qualified Data.Map as M
 
@@ -354,6 +355,42 @@ stModOp OP_CHECKSIG = do
   -- tySet v_2 pkTy
   pushStack (Sig v_1 v_2) bool
 stModOp OP_CHECKMULTISIG = do
+  let customLogic = "\
+  \(N #=< MAX_PUBS),\n\
+  \(N #> 0),\n\
+  \(M #=< N),\n\
+  \(M #> 0),\n\
+
+  \(PosPUBS #= N),\n\
+  \(PosNPRIVS #= N + 1),\n\
+  \(PosPRIVS #= N + 1 + M),\n\
+
+  \(element(PosPUBS, Xs, P)),\n\
+  \(P in 20),\n\
+
+  \(element(PosNPRIVS, Xs, NPRIVS)),\n\
+  \(NPRIVS in 0..4),\n\
+
+  \(element(PosPRIVS, Xs, PRIV)),\n\
+  \(PRIV in 33\\/67),\n"
+
+  st <- get
+  let maxPubs = 20
+      maxStackPop = maxPubs*2+2
+      extras = map Var $ take (maxStackPop - length (stack st)) [freshV st,((freshV st)-1)..]
+  let stack' = if null extras
+                then take maxStackPop (stack st)
+                else stack st ++ extras
+
+  mapM_ (flip tySet top) extras
+  st' <- get
+
+  let pl = solveForArgs (st') ["N,M"] ("Xs",stack') customLogic
+
+  error $ "pl: " ++ show pl
+
+
+{-
   e_npubs <- popStack
   n_pubs <-
     case e_npubs of
@@ -393,6 +430,8 @@ stModOp OP_CHECKMULTISIG = do
   ks_priv <- popsStack n_privs
   popStack -- Due to a bug in the Bitcoin implementation :)
   pushStack (MultiSig ks_priv ks_pub) bool
+  -}
+  return ()
 
 stModOp OP_CODESEPARATOR = return ()
 stModOp OP_NOP1 = return ()

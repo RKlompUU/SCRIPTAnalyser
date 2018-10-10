@@ -30,14 +30,6 @@ initScriptKnowledge bs eIdents =
 type PL = String
 type PrologWriter a = ReaderT ScriptKnowledge (ExceptT String (Writer PL)) a
 
-withSep :: String -> String -> PrologWriter a -> PrologWriter a
-withSep sep endStr writer = do
-  oldSep <- factSep <$> ask
-  tell "("
-  r <- local (\sk -> sk {factSep = sep}) writer
-  tell $ endStr ++ ")" ++ oldSep
-  return r
-
 askTy :: Expr -> PrologWriter (Ident,Ty)
 askTy e = do
   i <- (\f -> f e) <$> eMapping <$> ask
@@ -57,39 +49,43 @@ plFact pl =
 branchToProlog :: BuildState -> Either String PL
 branchToProlog b =
   let eIdents = \e -> M.findIndex e $ ty_cnstrs b
-  in case runWriter (runExceptT (runReaderT bToProlog (initScriptKnowledge b eIdents))) of
+  in case runWriter (runExceptT (runReaderT (bToProlog [] Nothing "") (initScriptKnowledge b eIdents))) of
     (Left e,_)   -> Left e
     (Right _,pl) -> Right pl
 
-bToProlog :: PrologWriter ()
-bToProlog = do
+
+solveForArgs :: BuildState -> [String] -> (String,[Expr]) -> String -> Either String PL
+solveForArgs b args namedList customLogic =
+  let eIdents = \e -> M.findIndex e $ ty_cnstrs b
+  in case runWriter (runExceptT (runReaderT (bToProlog args (Just namedList) customLogic) (initScriptKnowledge b eIdents))) of
+    (Left e,_)   -> Left e
+    (Right _,pl) -> Right pl
+
+
+
+bToProlog :: [String] -> Maybe (String,[Expr]) -> String -> PrologWriter ()
+bToProlog args namedList customLogic = do
   tell $ ":- use_module(library(clpfd)).\n\n"
   css <- val_cnstrs <$> buildState <$> ask
 
+  tell $ "s(" ++ intercalate "," args ++ ") :-\n"
 
-  tell $ "s :-\n"
+  if isJust namedList
+    then do
+      listTys <- mapM askTy (snd $ fromJust namedList)
+      tell $ (fst $ fromJust namedList) ++ "bs = [" ++ (intercalate "," $ map tyBSPL listTys) ++ "],\n"
+      tell $ (fst $ fromJust namedList) ++ "ints = [" ++ (intercalate "," $ map tyIPL listTys) ++ "],\n"
+    else return ()
 
   let es = nub $ concatMap esInC css
   mapM_ tellTy es
 
   mapM_ cToProlog css
---  mapM_ (\(i,c) -> addStmt i c) (zip [0..] css)
   tell "(#\\ 0).\n"
 
 tellTy :: Expr -> PrologWriter ()
 tellTy e =
   askTy e >>= stateTy
-
-addStmt :: Int -> ValConstraint -> PrologWriter ()
-addStmt i c = do
-  tell $ "s" ++ show i ++ " :-\n"
-
-  let es = esInC c
-  mapM_ tellTy es
-
-  tell "("
-  local (\sk -> sk {factSep = " #/\\\n"}) (cToProlog c)
-  --tell "true.\n"
 
 cToProlog :: ValConstraint -> PrologWriter ()
 cToProlog (C_IsTrue e) = do

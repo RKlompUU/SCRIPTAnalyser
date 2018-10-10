@@ -1,6 +1,6 @@
 :- use_module(library(clpfd)).
 
-s(T16ints, T14ints, T11ints) :-
+s() :-
 (T15bs in (0)..(1)),
 (T15ints in (0)..(1)),
 (T13bs in (0)..(4)),

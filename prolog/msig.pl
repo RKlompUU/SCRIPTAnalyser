@@ -16,6 +16,8 @@ s(N, M) :-
 
 (X0 in 0..4),
 (X3 in 20),
+(X5 in 20),
+(X7 in 20),
 
 (element(PosPUBS, Xs, P)),
 (P in 20),
@@ -23,7 +25,7 @@ s(N, M) :-
 (element(PosNPRIVS, Xs, NPRIVS)),
 (NPRIVS in 0..4),
 
-(PRIV in 33\/67),
 (element(PosPRIVS, Xs, PRIV)),
+(PRIV in 33\/67),
 
 (#\ 0).

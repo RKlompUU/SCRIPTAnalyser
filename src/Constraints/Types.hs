@@ -20,6 +20,9 @@ import KlompStandard
 import qualified Data.Typeable as T
 import qualified Data.Data as TD
 
+import Control.Monad.Except
+import Control.Monad.Writer
+
 type Ident = Int
 type OpIdent = String
 data Expr where
@@ -343,16 +346,17 @@ addCnstr c = do
   st <- get
   put $ st {val_cnstrs = c : val_cnstrs st}
 
-type BranchBuilder a = ExceptT String (State BuildState) a
+type BranchBuilder a = ExceptT String (StateT BuildState IO) a
 
 failBranch :: String -> BranchBuilder a
 failBranch = throwError
 
-unwrapBuildMonad :: BranchBuilder a -> BranchReport
-unwrapBuildMonad b =
-  case flip runState (initBuildState) $ runExceptT b of
-    (Left e,st)    -> branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Just e }
-    (Right _,st) -> branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Nothing }
+unwrapBuildMonad :: BranchBuilder a -> IO BranchReport
+unwrapBuildMonad b = do
+  r <- flip runStateT (initBuildState) $ runExceptT b
+  case r of
+    (Left e,st)    -> return $ branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Just e }
+    (Right _,st) -> return $ branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Nothing }
 
 type Stack = [Expr]
 data BuildState =
@@ -398,6 +402,8 @@ branchReport =
     prologValid  = False,
     prologReport = "Not applicable"
   }
+
+type IOReport a = ExceptT String (WriterT String IO) a
 
 txSeqNum = 4194549
 

@@ -22,11 +22,11 @@ import Constraints.ToProlog
 import qualified Data.Map as M
 
 
-genBuildStates :: ScriptAST -> [BranchReport]
+genBuildStates :: ScriptAST -> IO [BranchReport]
 genBuildStates script
   = map (\(i,r) -> r { branchID = i })
-  $ zip [0..]
-  $ map (\s -> unwrapBuildMonad (s >> finalizeBranch)) (runReader (genCnstrs script) (return ()))
+  <$> zip [0..]
+  <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (runReader (genCnstrs script) (return ()))
 
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do

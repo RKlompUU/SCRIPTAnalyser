@@ -4,10 +4,7 @@ module Lib
     ) where
 
 
-import Control.Monad.Writer
 import Control.Monad
-
-import System.Process
 
 import Script.Parser
 import Script.AST
@@ -21,23 +18,21 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List
 import Data.Maybe
 
+import qualified Control.Exception as E
+import Control.Monad.Writer
+import Control.Monad.Except
 import Debug.Trace
 
 import qualified Data.Map.Lazy as M
 
-import Control.Monad.Except
 import KlompStandard
 import Constraints.Gen
 import Constraints.Types
-import Constraints.ToProlog
 import Control.Monad
+import Constraints.RunProlog
 
 import Script.Sugar
 
-import System.IO.Temp
-import qualified Control.Exception as E
-
-type IOReport a = ExceptT String (WriterT String IO) a
 
 serializeScript :: String -> Either String B.ByteString
 serializeScript str =
@@ -56,7 +51,7 @@ analyseOpenScript_ bs dir preVerdict verbosity = do
   let script = decode bs
 
   let ast = runFillLabels $ buildAST (scriptOps script)
-      branchReports = genBuildStates ast
+  branchReports <- lift $ lift $ genBuildStates ast
   branchReports' <- mapM (prologVerify dir) branchReports
 
   when (verbosity >= 2) $ do
@@ -81,34 +76,6 @@ analyseOpenScript_ bs dir preVerdict verbosity = do
   if (null successBuilds)
     then tell (preVerdict ++ "nonredeemable")
     else tell (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") -- >> exitSuccess
-
-prologVerify :: String -> BranchReport -> IOReport BranchReport
-prologVerify dir report@(BranchReport _ _ (Just err) _ _) =
-  return report
-prologVerify dir report =
-  case branchToProlog (symbolicEval report) of
-    Left e -> return $ report { prologReport = e }
-    Right pl -> do
-      dir' <- liftIO $ createTempDirectory "/tmp" "SCRIPTAnalyser"
-      let fn = dir' ++ "/BitcoinAnalysis-script.pl"
-
-      liftIO $ writeFile fn pl
-      --results <- mapM (verifyC fn) (zip [0..] (val_cnstrs bs))
-      result <- verifyC fn (-1,undefined)
-      liftIO $ removeIfFileExists fn
-      liftIO $ removeIfDirExists dir'
-
-      let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ fst result --concat (map fst results)
-      if snd result
-        then return $ report { prologValid = True, prologReport = r }
-        else return $ report { prologReport = r }
-
-verifyC :: String -> (Int,ValConstraint) -> IOReport (String,Bool)
-verifyC fn (i,c) = do
-  let expected = "true."
-  let str = "s" ++ (if i == -1 then "" else show i) ++ "."
-  (c,r,e) <- liftIO $ readProcessWithExitCode "/usr/bin/swipl" [fn] str
-  return $ ("***\n" ++ "Expecting: " ++ expected ++ "\n" ++ r ++ e ++ "***\n",isInfixOf expected r)
 
 dumpList :: [String] -> String
 dumpList xs =

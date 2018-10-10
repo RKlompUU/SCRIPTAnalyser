@@ -356,22 +356,25 @@ stModOp OP_CHECKSIG = do
   pushStack (Sig v_1 v_2) bool
 stModOp OP_CHECKMULTISIG = do
   let customLogic = "\
+  \(MAX_PUBS = 20),\n\
   \(N #=< MAX_PUBS),\n\
   \(N #> 0),\n\
   \(M #=< N),\n\
   \(M #> 0),\n\
 
-  \(PosPUBS #= N),\n\
-  \(PosNPRIVS #= N + 1),\n\
-  \(PosPRIVS #= N + 1 + M),\n\
+  \(element(1, Xsints, N)),\n\
 
-  \(element(PosPUBS, Xs, P)),\n\
-  \(P in 20),\n\
+  \(PosPUBS #= N + 1),\n\
+  \(PosNPRIVS #= N + 2),\n\
+  \(PosPRIVS #= N + 2 + M),\n\
 
-  \(element(PosNPRIVS, Xs, NPRIVS)),\n\
+  \(element(PosPUBS, Xsbs, PUB)),\n\
+  \(PUB in 65),\n\
+
+  \(element(PosNPRIVS, Xsbs, NPRIVS)),\n\
   \(NPRIVS in 0..4),\n\
 
-  \(element(PosPRIVS, Xs, PRIV)),\n\
+  \(element(PosPRIVS, Xsbs, PRIV)),\n\
   \(PRIV in 33\\/67),\n"
 
   st <- get
@@ -385,9 +388,10 @@ stModOp OP_CHECKMULTISIG = do
   mapM_ (flip tySet top) extras
   st' <- get
 
-  let pl = solveForArgs (st') ["N,M"] ("Xs",stack') customLogic
-
-  error $ "pl: " ++ show pl
+  let plGen = solveForArgs (st') ["N"] ("Xs",stack') customLogic
+  case plGen of
+    Left err -> failBranch err
+    Right pl -> failBranch $ "pl: " ++ pl ++ ",,,, " ++ printStack stack'
 
 
 {-

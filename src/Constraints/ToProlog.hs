@@ -61,8 +61,6 @@ solveForArgs b args namedList customLogic =
     (Left e,_)   -> Left e
     (Right _,pl) -> Right pl
 
-
-
 bToProlog :: [String] -> Maybe (String,[Expr]) -> String -> PrologWriter ()
 bToProlog args namedList customLogic = do
   tell $ ":- use_module(library(clpfd)).\n\n"
@@ -77,7 +75,11 @@ bToProlog args namedList customLogic = do
       tell $ (fst $ fromJust namedList) ++ "ints = [" ++ (intercalate "," $ map tyIPL listTys) ++ "],\n"
     else return ()
 
-  let es = nub $ concatMap esInC css
+  tell customLogic
+
+  let es = if isJust namedList
+            then nub $ (concatMap esInC css ++ concatMap esInE (snd $ fromJust namedList))
+            else nub $ concatMap esInC css
   mapM_ tellTy es
 
   mapM_ cToProlog css

@@ -18,6 +18,7 @@ import Data.Maybe
 import Bitcoin.Script.Integer
 import Constraints.Types
 import Constraints.ToProlog
+import Constraints.RunProlog
 
 import qualified Data.Map as M
 
@@ -369,13 +370,13 @@ stModOp OP_CHECKMULTISIG = do
   \(PosPRIVS #= N + 2 + M),\n\
 
   \(element(PosPUBS, Xsbs, PUB)),\n\
-  \(PUB in 65),\n\
+  \(PUB in 33\\/65),\n\
 
   \(element(PosNPRIVS, Xsbs, NPRIVS)),\n\
   \(NPRIVS in 0..4),\n\
 
   \(element(PosPRIVS, Xsbs, PRIV)),\n\
-  \(PRIV in 33\\/67),\n"
+  \(PRIV in 67),\n"
 
   st <- get
   let maxPubs = 20
@@ -389,53 +390,25 @@ stModOp OP_CHECKMULTISIG = do
   st' <- get
 
   let plGen = solveForArgs (st') ["N"] ("Xs",stack') customLogic
-  case plGen of
-    Left err -> failBranch err
-    Right pl -> failBranch $ "pl: " ++ pl ++ ",,,, " ++ printStack stack'
-
-
-{-
-  e_npubs <- popStack
-  n_pubs <-
-    case e_npubs of
-      (Var x) -> do
-        {-
-         - In this case n_pubs must be specified by the input script, however,
-         - it may still be constrained by the subsequent set of public keys.
-         - Thus, in this case the stack is inspected to find the position where
-         - e_nprivs resides, and anything up to but not including this position
-         - is a public key if the output script is redeemable.
-         -}
-        st <- stack <$> get
-        return $ fromJust
-               $ findIndex isNonPub (st ++ [ConstInt 0])
-        where isNonPub e =
-
-
-      _ -> case convert2Int e_npubs of
-            Just (ConstInt i) -> return i
-            Nothing -> do
-              {-
-               - In this case e_npubs does not belong to the atom expressions,
-               - Which means we need a constraint solver to find a minimum
-               - solution.
-               -}
-              st <- get
-              error "TODO"
+  n_pubs <- case plGen of
+              Left err -> failBranch err
+              Right pl -> do
+                r <- liftIO $ prologSolve "N" pl
+                case r of
+                  Left err -> failBranch err
+                  Right i -> return i
+  popStack -- the n_pubs
   ks_pub <- popsStack n_pubs
 
   e_nprivs <- popStack
   n_privs <-
     case convert2Int e_nprivs of
       Just (ConstInt i) -> return i
-      Nothing -> return 1 -- When n_privs can be chosen by
+      Nothing -> return 1 -- When n_privs can be chosen by the input script, it can always be set to the minimal 1
 
-  n_s  <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
   ks_priv <- popsStack n_privs
-  popStack -- Due to a bug in the Bitcoin implementation :)
+  popStack -- Due to a bug in the Bitcoin core implementation
   pushStack (MultiSig ks_priv ks_pub) bool
-  -}
-  return ()
 
 stModOp OP_CODESEPARATOR = return ()
 stModOp OP_NOP1 = return ()

@@ -153,15 +153,15 @@ OP_EQUAL`;
   PUSH i700000 # Expiration: block number 700,000
   OP_CHECKLOCKTIMEVERIFY
   OP_DROP
-  PUSH 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d # <consumer pubkey>
+  PUSH 02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc # <consumer pubkey>
   OP_CHECKSIG
 OP_ELSE
   OP_0
   OP_ROT
   OP_ROT
   PUSH i2
-  PUSH 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d # <consumer pubkey>
-  PUSH 0000f47ceb3a510000000000fc4acc5a69200000 # <provider pubkey>
+  PUSH 02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc # <consumer pubkey>
+  PUSH 04e5238ab2a17f0bcae04fc07e421fd7b4f80fc9b8a3f3ab4e5eeb7b255800ec5091d3e5985039bb2580e9758ea186329fbc50bff49d9018a72343c733b437b19f # <provider pubkey>
   PUSH i2
   OP_CHECKMULTISIG
 OP_ENDIF`;
@@ -177,13 +177,13 @@ OP_IF
   PUSH i700000 # Expiration: block number 700,000
   OP_CHECKLOCKTIMEVERIFY
   OP_DROP
-  PUSH 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d # <consumer pubkey>
+  PUSH 02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc # <consumer pubkey>
   OP_CHECKSIG
 OP_ELSE
   OP_0
   PUSH i2
-  PUSH 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d # <consumer pubkey>
-  PUSH 0000f47ceb3a510000000000fc4acc5a69200000 # <provider pubkey>
+  PUSH 02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc # <consumer pubkey>
+  PUSH 04e5238ab2a17f0bcae04fc07e421fd7b4f80fc9b8a3f3ab4e5eeb7b255800ec5091d3e5985039bb2580e9758ea186329fbc50bff49d9018a72343c733b437b19f # <provider pubkey>
   PUSH i2
   OP_CHECKMULTISIG
 OP_ENDIF`;

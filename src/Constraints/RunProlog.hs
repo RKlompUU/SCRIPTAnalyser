@@ -1,5 +1,5 @@
 module Constraints.RunProlog
-  ( prologVerify ) where
+  ( prologVerify, prologSolve ) where
 
 import Constraints.Types
 import Constraints.ToProlog
@@ -10,6 +10,23 @@ import System.IO.Temp
 import qualified Control.Exception as E
 import Control.Monad.State.Lazy
 import Data.List
+
+import Constraints.PrologResultParser
+
+prologSolve :: String -> String -> IO (Either String Int)
+prologSolve var pl = do
+  dir' <- liftIO $ createTempDirectory "/tmp" "SCRIPTAnalyser"
+  let fn = dir' ++ "/BitcoinAnalysis-script.pl"
+
+  liftIO $ writeFile fn pl
+
+  let str = "s(" ++ var ++ ")."
+  (c,r,e) <- liftIO $ readProcessWithExitCode "/usr/bin/swipl" [fn] str
+  let solution = parsePrologResult var r
+
+  liftIO $ removeIfFileExists fn
+  liftIO $ removeIfDirExists dir'
+  return solution
 
 prologVerify :: String -> BranchReport -> IOReport BranchReport
 prologVerify dir report@(BranchReport _ _ (Just err) _ _) =

@@ -35,6 +35,7 @@ library
       Constraints.Types
       Constraints.ToProlog
       Constraints.RunProlog
+      Constraints.PrologResultParser
       Cryptography
       KlompStandard
   other-modules:

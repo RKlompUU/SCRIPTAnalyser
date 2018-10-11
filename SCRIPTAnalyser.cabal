@@ -40,8 +40,6 @@ library
       KlompStandard
   other-modules:
       Paths_SCRIPTAnalyser
-      Bitcoin.Misc.BigInt
-      Bitcoin.Misc.OctetStream
       Script.Sugar
   hs-source-dirs:
       src
@@ -67,6 +65,7 @@ library
       hex >= 0.1.2,
       hexstring >= 0.11.1,
       bitcoin-script,
+      bitcoin-hs,
       array >= 0.5.2.0,
       transformers,
       process

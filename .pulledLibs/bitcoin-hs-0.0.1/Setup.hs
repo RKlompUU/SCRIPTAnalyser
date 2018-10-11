@@ -77,7 +77,7 @@ theFlags lbi = configConfigurationsFlags $ configFlags lbi
 
 doCompileWithAsm :: LocalBuildInfo -> Bool
 doCompileWithAsm lbi =
-  case lookup (flagName "x86asm") (theFlags lbi) of
+  case lookup (mkFlagName "x86asm") (theFlags lbi) of
     Nothing -> False
     Just b  -> b
 
@@ -193,4 +193,3 @@ myConfHook (genpkgdesc,hookbuildinfo) cfgflags = do
 main :: IO ()
 main = do
   defaultMainWithHooks $ simpleUserHooks { confHook = myConfHook , buildHook = myBuildHook }
-

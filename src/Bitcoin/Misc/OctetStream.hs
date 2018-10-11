@@ -1,1 +1,1 @@
-../../../bitcoin-hs-0.0.1/Bitcoin/Misc/OctetStream.hs
+../../../.pulledLibs/bitcoin-hs-0.0.1/Bitcoin/Misc/OctetStream.hs

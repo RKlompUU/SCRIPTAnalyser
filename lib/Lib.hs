@@ -6,8 +6,8 @@ module Lib
 
 import Control.Monad
 
-import Script.Parser
-import Script.AST
+import Parser.Parser
+import Parser.AST
 import Data.Bitcoin.Script
 import Data.Word (Word8)
 import Data.Binary (Binary)
@@ -31,7 +31,7 @@ import Constraints.Types
 import Control.Monad
 import Constraints.RunProlog
 
-import Script.Sugar
+import Parser.SyntaxSugar
 
 
 serializeScript :: String -> Either String B.ByteString

@@ -7,7 +7,7 @@ import Control.Monad.Trans.Reader
 import Control.Monad.State.Lazy
 import Control.Applicative
 
-import Script.AST
+import Parser.AST
 import Data.Bitcoin.Script.Types
 
 import qualified Data.ByteString as BS

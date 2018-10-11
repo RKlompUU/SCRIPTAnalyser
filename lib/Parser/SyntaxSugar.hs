@@ -1,4 +1,4 @@
-module Script.Sugar (unsugar, hexInt) where
+module Parser.SyntaxSugar (unsugar, hexInt) where
 
 import Prelude hiding ((<$>), (<*), (*>), (<*>))
 

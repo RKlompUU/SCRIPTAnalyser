@@ -42,7 +42,7 @@ library
       Paths_SCRIPTAnalyser
       Script.Sugar
   hs-source-dirs:
-      src
+      lib
   build-depends:
       base >=4.7,
       binary,
@@ -76,7 +76,7 @@ executable SCRIPTAnalyser-exe
   other-modules:
       Paths_SCRIPTAnalyser
   hs-source-dirs:
-      app
+      exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       SCRIPTAnalyser

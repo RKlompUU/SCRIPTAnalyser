@@ -373,7 +373,8 @@ data BuildState =
     altStack  :: Stack,
     freshAltV :: Ident,
     freshAV   :: Ident,
-    successMsigConts :: [(Ident,[(Int,Int)])]
+    successMsigConts :: [(Ident,[(Int,Int)])],
+    successIntConts :: [(Ident,[Int])]
   }
 initBuildState =
   BuildState {
@@ -387,18 +388,35 @@ initBuildState =
     altStack   = [],
     freshAltV  = 0,
     freshAV    = 0,
-    successMsigConts = []
+    successMsigConts = [],
+    successIntConts = []
   }
 
 rerunFromContinuation :: BuildState -> BuildState
 rerunFromContinuation bs =
-  let msigConts = reverse
+  let msigConts = successMsigConts bs
+      msigConts' = reverse
+                 $ (\((ident,conts):xs) -> ((ident,tail conts):xs))
+                 $ reverse msigConts
+      msigContsHighestIdent = maximum
+                            $ map fst
+                            $ filter ((not . null) . snd) msigConts
+      intConts = successIntConts bs
+      intConts' = reverse
                 $ (\((ident,conts):xs) -> ((ident,tail conts):xs))
-                $ reverse
-                $ successMsigConts bs
-  in initBuildState {
-      successMsigConts = msigConts
-     }
+                $ reverse intConts
+      intContsHighestIdent = maximum
+                           $ map fst
+                           $ filter ((not . null) . snd) intConts
+  in if msigContsHighestIdent > intContsHighestIdent
+      then initBuildState {
+            successMsigConts = msigConts',
+            successIntConts = intConts
+           }
+      else initBuildState {
+            successMsigConts = msigConts,
+            successIntConts = intConts'
+           }
 
 
 logSuccessMsigContinuation :: Ident -> [(Int,Int)] -> BranchBuilder ()
@@ -411,13 +429,30 @@ logSuccessMsigContinuation ident conts = do
           Nothing -> (ident,conts) : msigConts
   put st { successMsigConts = msigConts' }
 
+
+logSuccessIntContinuation :: Ident -> [Int] -> BranchBuilder ()
+logSuccessIntContinuation ident conts = do
+  st <- get
+  let intConts = successIntConts st
+      intConts' =
+        case findIndex ((== ident) . fst) intConts of
+          Just i -> replaceIndex intConts i (ident,conts)
+          Nothing -> (ident,conts) : intConts
+  put st { successIntConts = intConts' }
+
+
 continueFromMsigContinuation :: Ident -> [(Int,Int)] -> BranchBuilder [(Int,Int)]
 continueFromMsigContinuation ident conts = do
   st <- get
   case lookup ident (successMsigConts st) of
     Just conts' -> return conts'
     Nothing   -> return conts
-
+continueFromIntContinuation :: Ident -> [Int] -> BranchBuilder [Int]
+continueFromIntContinuation ident conts = do
+  st <- get
+  case lookup ident (successIntConts st) of
+    Just conts' -> return conts'
+    Nothing   -> return conts
 
 rerunableBranch :: BranchReport -> Bool
 rerunableBranch r =

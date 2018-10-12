@@ -193,6 +193,24 @@ genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 
+genCnstrs (ScriptOp lbl OP_ROLL cont) = do
+  withReader r $ genCnstrs cont
+  where r :: BranchCont -> BranchCont
+        r bPriorCont = \bAfterCont ->
+          bPriorCont $ do
+            e_n <- popStack
+            case convert2Int e_n of
+              Just (ConstInt i) -> do
+                stModOpRoll i
+              Nothing -> do
+                let pairs = [1..]
+                pairs' <- continueFromIntContinuation lbl pairs
+
+                conts <- tryContinuations lbl pairs' tryRoll bAfterCont
+                logSuccessIntContinuation lbl conts
+                where tryRoll n = entering lbl OP_ROLL
+                                >> stModOpRoll n
+
 genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
   withReader r $ genCnstrs cont
   where r :: BranchCont -> BranchCont
@@ -350,12 +368,6 @@ stModOp OP_PICK = do
   es <- popsStack (n-1)
   e_n <- popStack
   pushsStack_ (e_n : es)
-  pushStack_ e_n
-stModOp OP_ROLL = do
-  n <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
-  es <- popsStack (n-1)
-  e_n <- popStack
-  pushsStack_ es
   pushStack_ e_n
 stModOp OP_ROT = do
   v_3 <- popStack
@@ -571,6 +583,11 @@ stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " 
 stModOp op =
   failBranch $ "Error, no stModOp implementation for operator: " ++ show op
 
+stModOpRoll n = do
+  es <- popsStack (n-1)
+  e_n <- popStack
+  pushsStack_ es
+  pushStack_ e_n
 
 stModOpMSIG nPub nSig = do
   e_npub <- popStack -- the n_pubs

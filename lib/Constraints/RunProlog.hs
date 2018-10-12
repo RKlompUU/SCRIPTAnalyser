@@ -13,16 +13,16 @@ import Data.List
 
 import Constraints.PrologResultParser
 
-prologSolve :: String -> String -> IO (Either String Int)
-prologSolve var pl = do
+prologSolve :: [String] -> String -> IO (Either String [(Int,Int)])
+prologSolve vars pl = do
   dir' <- liftIO $ createTempDirectory "/tmp" "SCRIPTAnalyser"
   let fn = dir' ++ "/BitcoinAnalysis-script.pl"
 
   liftIO $ writeFile fn pl
 
-  let str = "s(" ++ var ++ "), indomain(" ++ var ++ ")."
+  let str = "forall(t(" ++ intercalate "," vars ++ "), writeln(" ++ intercalate " + " vars ++ "))."
   (c,r,e) <- liftIO $ readProcessWithExitCode "/usr/bin/swipl" [fn] str
-  let solution = parsePrologResult var r
+  let solution = parsePrologPairResults r
 
   liftIO $ removeIfFileExists fn
   liftIO $ removeIfDirExists dir'

@@ -66,6 +66,13 @@ bToProlog args namedList customLogic = do
   tell $ ":- use_module(library(clpfd)).\n\n"
   css <- val_cnstrs <$> buildState <$> ask
 
+  if not $ null args
+    then tell $ "t(" ++ intercalate "," args ++ ") :-\n\
+                 \s(" ++ intercalate "," args ++ "),\n\
+                 \indomain(N),\n\
+                 \indomain(M).\n"
+    else return ()
+
   tell $ "s(" ++ intercalate "," args ++ ") :-\n"
 
   if isJust namedList

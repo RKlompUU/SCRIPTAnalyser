@@ -198,10 +198,11 @@ genCnstrs (ScriptOp lbl OP_ROLL cont) = do
   where r :: BranchCont -> BranchCont
         r bPriorCont = \bAfterCont ->
           bPriorCont $ do
-            e_n <- popStack
+            e_n <- peakStack
             case convert2Int e_n of
               Just (ConstInt i) -> do
                 stModOpRoll i
+                bAfterCont
               Nothing -> do
                 let pairs = [1..]
                 pairs' <- continueFromIntContinuation lbl pairs
@@ -210,6 +211,25 @@ genCnstrs (ScriptOp lbl OP_ROLL cont) = do
                 logSuccessIntContinuation lbl conts
                 where tryRoll n = entering lbl OP_ROLL
                                 >> stModOpRoll n
+
+genCnstrs (ScriptOp lbl OP_PICK cont) = do
+  withReader r $ genCnstrs cont
+  where r :: BranchCont -> BranchCont
+        r bPriorCont = \bAfterCont ->
+          bPriorCont $ do
+            e_n <- peakStack
+            case convert2Int e_n of
+              Just (ConstInt i) -> do
+                stModOpPick i
+                bAfterCont
+              Nothing -> do
+                let pairs = [1..]
+                pairs' <- continueFromIntContinuation lbl pairs
+
+                conts <- tryContinuations lbl pairs' tryPick bAfterCont
+                logSuccessIntContinuation lbl conts
+                where tryPick n = entering lbl OP_PICK
+                                >> stModOpPick n
 
 genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
   withReader r $ genCnstrs cont
@@ -363,12 +383,6 @@ stModOp OP_OVER = do
   v2 <- popStack
   v1 <- popStack
   pushsStack_ [v1,v2,v1]
-stModOp OP_PICK = do
-  n <- e2i <$> popStack -- TODO: Shouldn't use e2i here! What is popped is not necessarily an integer
-  es <- popsStack (n-1)
-  e_n <- popStack
-  pushsStack_ (e_n : es)
-  pushStack_ e_n
 stModOp OP_ROT = do
   v_3 <- popStack
   v_2 <- popStack
@@ -584,9 +598,32 @@ stModOp op =
   failBranch $ "Error, no stModOp implementation for operator: " ++ show op
 
 stModOpRoll n = do
+  e <- popStack
+  let constN = ConstInt n
+      nCnstr = Op e "==" constN
+
+  tySet nCnstr bool
+  (uncurry tySet) (annotTy constN)
+  addCnstr (C_IsTrue nCnstr)
+
   es <- popsStack (n-1)
   e_n <- popStack
   pushsStack_ es
+  pushStack_ e_n
+
+
+stModOpPick n = do
+  e <- popStack
+  let constN = ConstInt n
+      nCnstr = Op e "==" constN
+
+  tySet nCnstr bool
+  (uncurry tySet) (annotTy constN)
+  addCnstr (C_IsTrue nCnstr)
+
+  es <- popsStack (n-1)
+  e_n <- popStack
+  pushsStack_ (e_n : es)
   pushStack_ e_n
 
 stModOpMSIG nPub nSig = do

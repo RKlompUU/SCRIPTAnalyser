@@ -399,6 +399,7 @@ rerunFromContinuation bs =
                  $ (\((ident,conts):xs) -> ((ident,tail conts):xs))
                  $ reverse msigConts
       msigContsHighestIdent = maximum
+                            $ (:) 0 -- In case the list in empty (to prevent an empty error thrown in maximum
                             $ map fst
                             $ filter ((not . null) . snd) msigConts
       intConts = successIntConts bs
@@ -406,6 +407,7 @@ rerunFromContinuation bs =
                 $ (\((ident,conts):xs) -> ((ident,tail conts):xs))
                 $ reverse intConts
       intContsHighestIdent = maximum
+                           $ (:) 0 -- In case the list in empty (to prevent an empty error thrown in maximum
                            $ map fst
                            $ filter ((not . null) . snd) intConts
   in if msigContsHighestIdent > intContsHighestIdent

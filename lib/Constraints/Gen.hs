@@ -30,6 +30,11 @@ genBuildStates script
   <$> zip [0..]
   <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (map (\a -> a (return ())) (runReader (genCnstrs script) id))
 
+rerunBranch :: BranchReport -> IO BranchReport
+rerunBranch bReport = do
+  (\r -> r { branchID = branchID bReport })
+  <$> unwrapBuildMonad (put (rerunFromContinuation (symbolicEval bReport)) >> branchBuilder bReport)
+
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
@@ -149,6 +154,18 @@ withReaderCont b cCont = do
   where r :: BranchCont -> BranchCont
         r bPriorCont = \after -> bPriorCont (b >> after)
 
+tryContinuations :: (Show a, Eq a) => Ident -> [a] -> (a -> BranchBuilder ()) -> BranchBuilder () -> BranchBuilder [a]
+tryContinuations ident [] _ _ = failBranch $ "No possible continuation left for " ++ show ident ++ "!"
+tryContinuations ident (x:xs) b bCont = do
+  stateSave <- get
+  E.catchError (verboseLog True ("Trying continuation " ++ show x) >>
+                b x >>
+                bCont >>
+                return xs)
+               (\e -> if null xs
+                        then failBranch e
+                        else put stateSave >> tryContinuations ident xs b bCont)
+
 noteBranchJump :: Label -> Bool -> BranchBuilder ()
 noteBranchJump lbl b = do
   st <- get
@@ -237,20 +254,14 @@ genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
                                 Right solutions -> return (pl,solutions)
 
             put stateSave
+            pairs' <- continueFromMsigContinuation lbl pairs
+
             verboseLog False $ "MSIG at label " ++ show lbl ++ ", generated prolog: " ++ pl
-            verboseLog True $ "Possible (nPub,nSig) solutions for label " ++ show lbl ++ ": " ++ show pairs
-            successCont pairs bAfterCont
-        successCont :: [(Int,Int)] -> BranchBuilder () -> BranchBuilder ()
-        successCont [] _ = failBranch "No viable (nPub,nSig) instances!"
-        successCont ((nPub,nSig):nextTries) bAfterCont = do
-          stateSave <- get
-          E.catchError (entering lbl OP_CHECKMULTISIG >>
-                        verboseLog True ("Trying (nPub,nSig) pair at label " ++ show lbl ++ ": (" ++ show nPub ++ "," ++ show nSig ++ ")") >>
-                        (stModOpMSIG nPub nSig) >>
-                        bAfterCont)
-                       (\e -> if null nextTries
-                                then failBranch e
-                                else put stateSave >> successCont nextTries bAfterCont)
+            verboseLog True $ "Possible (nPub,nSig) solutions for label " ++ show lbl ++ ": " ++ show pairs'
+            conts <- tryContinuations lbl pairs' tryMSIG bAfterCont
+            logSuccessMsigContinuation lbl conts
+            where tryMSIG (nPub,nSig) = entering lbl OP_CHECKMULTISIG
+                                      >> stModOpMSIG nPub nSig
 
 genCnstrs stmnt@(ScriptOp lbl op cont) | isJust op' =
   genCnstrs (ScriptOp lbl (fromJust op') (ScriptOp lbl OP_VERIFY cont))
@@ -563,32 +574,32 @@ stModOp op =
 
 
 stModOpMSIG nPub nSig = do
-    e_npub <- popStack -- the n_pubs
-    let n_pubsExpr = ConstInt nPub
-        npubCnstr = Op e_npub "==" n_pubsExpr
+  e_npub <- popStack -- the n_pubs
+  let n_pubsExpr = ConstInt nPub
+      npubCnstr = Op e_npub "==" n_pubsExpr
 
-    tySet npubCnstr bool
-    (uncurry tySet) (annotTy n_pubsExpr)
-    addCnstr (C_IsTrue npubCnstr)
+  tySet npubCnstr bool
+  (uncurry tySet) (annotTy n_pubsExpr)
+  addCnstr (C_IsTrue npubCnstr)
 
-    ks_pub <- popsStack nPub
+  ks_pub <- popsStack nPub
 
-    e_nprivs <- popStack
-    let nprivConstant = ConstInt nSig
-        nprivCnstr = Op e_nprivs "==" nprivConstant
-    addCnstr (C_IsTrue nprivCnstr)
-    tySet nprivCnstr bool
-    (uncurry tySet) (annotTy nprivConstant)
+  e_nprivs <- popStack
+  let nprivConstant = ConstInt nSig
+      nprivCnstr = Op e_nprivs "==" nprivConstant
+  addCnstr (C_IsTrue nprivCnstr)
+  tySet nprivCnstr bool
+  (uncurry tySet) (annotTy nprivConstant)
 
-    ks_priv <- popsStack nSig
-    bug <- popStack -- Due to a bug in the Bitcoin core implementation
-    let const0 = ConstInt 0
-        bugCnstr = Op bug "==" const0
-    (uncurry tySet) (annotTy const0)
-    tySet bugCnstr bool
-    addCnstr (C_IsTrue bugCnstr)
+  ks_priv <- popsStack nSig
+  bug <- popStack -- Due to a bug in the Bitcoin core implementation
+  let const0 = ConstInt 0
+      bugCnstr = Op bug "==" const0
+  (uncurry tySet) (annotTy const0)
+  tySet bugCnstr bool
+  addCnstr (C_IsTrue bugCnstr)
 
-    pushStack (MultiSig ks_priv ks_pub) bool
+  pushStack (MultiSig ks_priv ks_pub) bool
 
 disabledOps =
   [

@@ -353,12 +353,12 @@ type BranchBuilder a = ExceptT String (StateT BuildState IO) a
 failBranch :: String -> BranchBuilder a
 failBranch = throwError
 
-unwrapBuildMonad :: BranchBuilder a -> IO BranchReport
+unwrapBuildMonad :: BranchBuilder () -> IO BranchReport
 unwrapBuildMonad b = do
   r <- flip runStateT (initBuildState) $ runExceptT b
   case r of
-    (Left e,st)    -> return $ branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Just e }
-    (Right _,st) -> return $ branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Nothing }
+    (Left e,st)    -> return $ branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Just e, branchBuilder = b }
+    (Right _,st) -> return $ branchReport { symbolicEval = st {val_cnstrs = postCnstrs ++ val_cnstrs st}, symbolicErrs = Nothing, branchBuilder = b }
 
 type Stack = [Expr]
 data BuildState =
@@ -372,7 +372,8 @@ data BuildState =
     muts       :: [BranchMutation],
     altStack  :: Stack,
     freshAltV :: Ident,
-    freshAV   :: Ident
+    freshAV   :: Ident,
+    successMsigConts :: M.Map Ident [(Int,Int)]
   }
 initBuildState =
   BuildState {
@@ -385,13 +386,42 @@ initBuildState =
     muts       = [],
     altStack   = [],
     freshAltV  = 0,
-    freshAV    = 0
+    freshAV    = 0,
+    successMsigConts = M.empty
   }
+
+rerunFromContinuation :: BuildState -> BuildState
+rerunFromContinuation bs =
+  initBuildState {
+    successMsigConts = successMsigConts bs
+  }
+
+
+logSuccessMsigContinuation :: Ident -> [(Int,Int)] -> BranchBuilder ()
+logSuccessMsigContinuation ident conts = do
+  st <- get
+  put st { successMsigConts = M.insert ident conts (successMsigConts st) }
+
+continueFromMsigContinuation :: Ident -> [(Int,Int)] -> BranchBuilder [(Int,Int)]
+continueFromMsigContinuation ident conts = do
+  st <- get
+  case M.lookup ident (successMsigConts st) of
+    Just conts' -> return conts'
+    Nothing   -> return conts
+
+
+rerunableBranch :: BranchReport -> Bool
+rerunableBranch r =
+  let msigConts = M.toList
+                $ successMsigConts
+                $ symbolicEval r
+  in any (not . null) msigConts
 
 data BranchReport =
   BranchReport {
     branchID     :: Int,
     symbolicEval :: BuildState,
+    branchBuilder :: BranchBuilder (),
     symbolicErrs :: Maybe String,
     prologValid  :: Bool,
     prologReport :: String
@@ -400,6 +430,7 @@ branchReport =
   BranchReport {
     branchID     = 0,
     symbolicEval = undefined,
+    branchBuilder = undefined,
     symbolicErrs = Just "Not applicable",
     prologValid  = False,
     prologReport = "Not applicable"

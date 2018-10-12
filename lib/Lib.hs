@@ -52,7 +52,7 @@ analyseOpenScript_ bs dir preVerdict verbosity = do
 
   let ast = runFillLabels $ buildAST (scriptOps script)
   branchReports <- lift $ lift $ genBuildStates ast
-  branchReports' <- mapM (prologVerify dir) branchReports
+  branchReports' <- mapM (prologVerify (\report -> rerunBranch report) dir) branchReports
 
   when (verbosity >= 2) $ do
       tell "SCRIPT echo, followed by the lexed intermediate variant:\n"

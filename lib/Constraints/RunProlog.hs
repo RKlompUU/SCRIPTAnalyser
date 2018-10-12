@@ -28,10 +28,10 @@ prologSolve vars pl = do
   liftIO $ removeIfDirExists dir'
   return solution
 
-prologVerify :: String -> BranchReport -> IOReport BranchReport
-prologVerify dir report@(BranchReport _ _ (Just err) _ _) =
+prologVerify :: (BranchReport -> IO BranchReport) -> String -> BranchReport -> IOReport BranchReport
+prologVerify _ dir report@(BranchReport _ _ _ (Just err) _ _) =
   return report
-prologVerify dir report =
+prologVerify cont dir report =
   case branchToProlog (symbolicEval report) of
     Left e -> return $ report { prologReport = e }
     Right pl -> do
@@ -47,7 +47,11 @@ prologVerify dir report =
       let r = pl ++ "-----P-R-O-L-O-G-----\n" ++ fst result --concat (map fst results)
       if snd result
         then return $ report { prologValid = True, prologReport = r }
-        else return $ report { prologReport = r }
+        else if rerunableBranch report
+              then do
+                report' <- liftIO $ cont report
+                prologVerify cont dir report'
+              else return $ report { prologReport = r }
 
 verifyC :: String -> (Int,ValConstraint) -> IOReport (String,Bool)
 verifyC fn (i,c) = do

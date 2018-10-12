@@ -392,7 +392,9 @@ initBuildState =
 
 rerunFromContinuation :: BuildState -> BuildState
 rerunFromContinuation bs =
-  let msigConts = (\((ident,conts):xs) -> ((ident,tail conts):xs))
+  let msigConts = reverse
+                $ (\((ident,conts):xs) -> ((ident,tail conts):xs))
+                $ reverse
                 $ successMsigConts bs
   in initBuildState {
       successMsigConts = msigConts

@@ -56,6 +56,10 @@ replace :: Eq a => (a, [a]) -> [a] -> [a]
 replace (x,x') xs
   = concatMap (\y -> if x == y then x' else [y]) xs
 
+replaceIndex :: [a] -> Int -> a -> [a]
+replaceIndex xs i x =
+  take i xs ++ [x] ++ drop (i+1) xs
+
 printBSInHex :: BS.ByteString -> String
 printBSInHex = show . BSB.toLazyByteString . BSB.byteStringHex
 

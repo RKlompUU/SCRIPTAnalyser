@@ -32,7 +32,7 @@ genBuildStates script
 
 rerunBranch :: BranchReport -> IO BranchReport
 rerunBranch bReport = do
-  (\r -> r { branchID = branchID bReport })
+  (\r -> r { branchID = branchID bReport, branchBuilder = branchBuilder bReport })
   <$> unwrapBuildMonad (put (rerunFromContinuation (symbolicEval bReport)) >> branchBuilder bReport)
 
 finalizeBranch :: BranchBuilder ()
@@ -158,10 +158,10 @@ tryContinuations :: (Show a, Eq a) => Ident -> [a] -> (a -> BranchBuilder ()) ->
 tryContinuations ident [] _ _ = failBranch $ "No possible continuation left for " ++ show ident ++ "!"
 tryContinuations ident (x:xs) b bCont = do
   stateSave <- get
-  E.catchError (verboseLog True ("Trying continuation " ++ show x) >>
+  E.catchError (verboseLog True ("For label " ++ show ident ++ ", trying continuation " ++ show x) >>
                 b x >>
                 bCont >>
-                return xs)
+                return (x:xs))
                (\e -> if null xs
                         then failBranch e
                         else put stateSave >> tryContinuations ident xs b bCont)
@@ -257,7 +257,6 @@ genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
             pairs' <- continueFromMsigContinuation lbl pairs
 
             verboseLog False $ "MSIG at label " ++ show lbl ++ ", generated prolog: " ++ pl
-            verboseLog True $ "Possible (nPub,nSig) solutions for label " ++ show lbl ++ ": " ++ show pairs'
             conts <- tryContinuations lbl pairs' tryMSIG bAfterCont
             logSuccessMsigContinuation lbl conts
             where tryMSIG (nPub,nSig) = entering lbl OP_CHECKMULTISIG

@@ -373,7 +373,7 @@ data BuildState =
     altStack  :: Stack,
     freshAltV :: Ident,
     freshAV   :: Ident,
-    successMsigConts :: M.Map Ident [(Int,Int)]
+    successMsigConts :: [(Ident,[(Int,Int)])]
   }
 initBuildState =
   BuildState {
@@ -387,33 +387,39 @@ initBuildState =
     altStack   = [],
     freshAltV  = 0,
     freshAV    = 0,
-    successMsigConts = M.empty
+    successMsigConts = []
   }
 
 rerunFromContinuation :: BuildState -> BuildState
 rerunFromContinuation bs =
-  initBuildState {
-    successMsigConts = successMsigConts bs
-  }
+  let msigConts = (\((ident,conts):xs) -> ((ident,tail conts):xs))
+                $ successMsigConts bs
+  in initBuildState {
+      successMsigConts = msigConts
+     }
 
 
 logSuccessMsigContinuation :: Ident -> [(Int,Int)] -> BranchBuilder ()
 logSuccessMsigContinuation ident conts = do
   st <- get
-  put st { successMsigConts = M.insert ident conts (successMsigConts st) }
+  let msigConts = successMsigConts st
+      msigConts' =
+        case findIndex ((== ident) . fst) msigConts of
+          Just i -> replaceIndex msigConts i (ident,conts)
+          Nothing -> (ident,conts) : msigConts
+  put st { successMsigConts = msigConts' }
 
 continueFromMsigContinuation :: Ident -> [(Int,Int)] -> BranchBuilder [(Int,Int)]
 continueFromMsigContinuation ident conts = do
   st <- get
-  case M.lookup ident (successMsigConts st) of
+  case lookup ident (successMsigConts st) of
     Just conts' -> return conts'
     Nothing   -> return conts
 
 
 rerunableBranch :: BranchReport -> Bool
 rerunableBranch r =
-  let msigConts = M.toList
-                $ successMsigConts
+  let msigConts = successMsigConts
                 $ symbolicEval r
   in any (not . null) msigConts
 

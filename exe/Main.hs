@@ -36,11 +36,6 @@ readStdin = do
 main :: IO ()
 main = do
   args <- getArgs
-  -- Modes
-  --    0: i/prolog/nonredeemable,
-  --        where i = the lowest number of variables that need to match sig or hash
-  --    1: verbose
-  --    2: verbose (debug level)
   case (args !? 0) of
     Just n -> if not (all (\c -> any (==c) "0123456789") n)
                 then printHelp

@@ -20,6 +20,8 @@ import KlompStandard
 import qualified Data.Typeable as T
 import qualified Data.Data as TD
 
+import qualified Data.Bitcoin.Script.Types as Bitcoin
+
 import Control.Monad.Except
 import Control.Monad.Writer
 
@@ -494,11 +496,15 @@ data BranchMutation =
     Popped Expr Stack
   | Pushed Expr Stack
   | Infered Expr Ty
+  | Executing Label Bitcoin.ScriptOp
+  | Log String
 
 instance Show BranchMutation where
   show (Popped e s) = "Popped " ++ show e ++ "\n\t\t |-> " ++ show s
   show (Pushed e s) = "Pushed " ++ show e ++ "\n\t\t |-> " ++ show s
   show (Infered e t)  = "Infering that: " ++ show e ++ " :: " ++ show t
+  show (Executing lbl op) = "------------------\n\tProgram pointer at " ++ show lbl ++ ": " ++ show op ++ "\n\t"
+  show (Log str) = "*** " ++ str
 
 
 

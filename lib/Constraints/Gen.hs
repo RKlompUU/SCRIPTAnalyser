@@ -21,13 +21,14 @@ import Constraints.ToProlog
 import Constraints.RunProlog
 
 import qualified Data.Map as M
+import qualified Control.Monad.Except as E
 
 
 genBuildStates :: ScriptAST -> IO [BranchReport]
 genBuildStates script
   = map (\(i,r) -> r { branchID = i })
   <$> zip [0..]
-  <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (runReader (genCnstrs script) (return ()))
+  <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (map (\a -> a (return ())) (runReader (genCnstrs script) id))
 
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
@@ -35,7 +36,10 @@ finalizeBranch = do
   --tySet e bool
   addCnstr (C_IsTrue e)
 
-type ConstraintBuilder a = Reader (BranchBuilder ()) a
+
+type BranchCont = BranchBuilder () -> BranchBuilder ()
+--                                 \continuation -> current >> continuation
+type ConstraintBuilder = Reader BranchCont [BranchCont]
 
 
 --
@@ -139,6 +143,12 @@ pushAltStack e = do
 -- Main constraint generation functions
 --
 
+withReaderCont :: BranchBuilder () -> ConstraintBuilder -> ConstraintBuilder
+withReaderCont b cCont = do
+  withReader r $ cCont
+  where r :: BranchCont -> BranchCont
+        r bPriorCont = \after -> bPriorCont (b >> after)
+
 noteBranchJump :: Label -> Bool -> BranchBuilder ()
 noteBranchJump lbl b = do
   st <- get
@@ -147,10 +157,10 @@ noteBranchJump lbl b = do
 branched :: (Bool -> BranchBuilder ()) ->
             Bool ->
             ScriptAST ->
-            ConstraintBuilder [BranchBuilder ()]
-branched f b cont = withReader (>> f b) (genCnstrs cont)
+            ConstraintBuilder
+branched f b cont = withReaderCont (f b) (genCnstrs cont)
 
-genCnstrs :: ScriptAST -> ConstraintBuilder [BranchBuilder ()]
+genCnstrs :: ScriptAST -> ConstraintBuilder
 genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
   let stModITE = (\b -> do
                       v <- popStack
@@ -166,11 +176,24 @@ genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
   ss1 <- branched stModITE False b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 
+genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
+  withReader r $ genCnstrs cont
+  where r :: BranchCont -> BranchCont
+        r bPriorCont = \bAfterCont ->
+          bPriorCont $ successCont 1 20 bAfterCont
+        successCont :: Int -> Int -> BranchBuilder () -> BranchBuilder ()
+        successCont x bound bAfterCont = do
+          stateSave <- get
+          E.catchError (entering lbl OP_CHECKMULTISIG >> verboseLog True ("Trying npriv at label " ++ show lbl ++ ": " ++ show x) >> (stModOpMSIG x) >> bAfterCont)
+                       (\e -> if x < bound
+                                then put stateSave >> successCont (x+1) bound bAfterCont
+                                else failBranch e)
+
 genCnstrs stmnt@(ScriptOp lbl op cont) | isJust op' =
   genCnstrs (ScriptOp lbl (fromJust op') (ScriptOp lbl OP_VERIFY cont))
   where op' = lookup op verifyAfterOps
 genCnstrs (ScriptOp lbl op cont) = do
-  withReader (>> stModOp op) $ genCnstrs cont
+  withReaderCont (entering lbl op >> stModOp op) $ genCnstrs cont
 genCnstrs ScriptTail = do
   s <- ask
   return [s]
@@ -183,6 +206,18 @@ verifyAfterOps =
   (OP_CHECKMULTISIGVERIFY,OP_CHECKMULTISIG)
   ]
 
+entering :: Label -> ScriptOp -> BranchBuilder ()
+entering lbl op = do
+  st <- get
+  put $ st { muts = Executing lbl op : muts st }
+
+verboseLog :: Bool -> String -> BranchBuilder ()
+verboseLog ioPrint str = do
+  st <- get
+  put $ st { muts = Log str : muts st }
+  if ioPrint
+    then liftIO $ putStrLn str
+    else return ()
 
 
 stModOp :: ScriptOp -> BranchBuilder ()
@@ -228,7 +263,7 @@ stModOp OP_DEPTH = do
   addCnstr (C_IsTrue depthCnstr)
 stModOp OP_DROP = popStack >> return ()
 stModOp OP_DUP = popStack >>= \v -> pushsStack_ [v,v]
--- OP_IFDUP supported via the parser (see src/Script/Parser.y)
+-- OP_IFDUP supported via the parser (see lib/Parser/Parser.y)
 stModOp OP_NIP = do
   v <- popStack
   popStack
@@ -355,74 +390,6 @@ stModOp OP_CHECKSIG = do
   -- tySet v_1 skTy
   -- tySet v_2 pkTy
   pushStack (Sig v_1 v_2) bool
-stModOp OP_CHECKMULTISIG = do
-  let customLogic = "\
-  \(MAX_PUBS = 20),\n\
-  \(N #=< MAX_PUBS),\n\
-  \(N #> 0),\n\
-  \(M #=< N),\n\
-  \(M #> 0),\n\
-
-  \(element(1, Xsints, N)),\n\
-
-  \(PosPUBS #= N + 1),\n\
-  \(PosNPRIVS #= N + 2),\n\
-  \(PosPRIVS #= N + 2 + M),\n\
-
-  \(element(PosPUBS, Xsbs, PUB)),\n\
-  \(PUB in 33\\/65),\n\
-
-  \(element(PosNPRIVS, Xsbs, NPRIVS)),\n\
-  \(NPRIVS in 0..4),\n\
-
-  \(element(PosPRIVS, Xsbs, PRIV)),\n\
-  \(PRIV in 67),\n"
-
-  st <- get
-  let maxPubs = 20
-      maxStackPop = maxPubs*2+2
-      extras = map Var $ take (maxStackPop - length (stack st)) [freshV st,((freshV st)-1)..]
-  let stack' = if null extras
-                then take maxStackPop (stack st)
-                else stack st ++ extras
-
-  mapM_ (flip tySet top) extras
-  st' <- get
-
-  let plGen = solveForArgs (st') ["N"] ("Xs",stack') customLogic
-  n_pubs <- case plGen of
-              Left err -> failBranch err
-              Right pl -> do
-                r <- liftIO $ prologSolve "N" pl
-                case r of
-                  Left err -> failBranch err
-                  Right i -> return i
-  e_npub <- popStack -- the n_pubs
-  let n_pubsExpr = ConstInt n_pubs
-      npubCnstr = Op e_npub "==" n_pubsExpr
-
-  tySet npubCnstr bool
-  (uncurry tySet) (annotTy n_pubsExpr)
-
-  addCnstr (C_IsTrue npubCnstr)
-
-  ks_pub <- popsStack n_pubs
-
-  e_nprivs <- popStack
-  n_privs <-
-    case convert2Int e_nprivs of
-      Just (ConstInt i) -> return i
-      Nothing -> do
-        let nprivConstant = ConstInt 1
-            nprivCnstr = Op e_nprivs "==" nprivConstant
-        addCnstr (C_IsTrue nprivCnstr)
-        tySet nprivCnstr bool
-        (uncurry tySet) (annotTy nprivConstant)
-        return 1 -- When n_privs can be chosen by the input script, it can always be set to the minimal 1
-
-  ks_priv <- popsStack n_privs
-  popStack -- Due to a bug in the Bitcoin core implementation
-  pushStack (MultiSig ks_priv ks_pub) bool
 
 stModOp OP_CODESEPARATOR = return ()
 stModOp OP_NOP1 = return ()
@@ -525,12 +492,90 @@ stModOp OP_CHECKSEQUENCEVERIFY = do
   addCnstr (C_Spec lBit31_)
   addCnstr (C_Spec lBit22_)
 
+stModOp OP_CHECKMULTISIG =
+  stModOpMSIG 1
+
 -- DISABLED OP_CODES
 stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op
 
 stModOp op =
   failBranch $ "Error, no stModOp implementation for operator: " ++ show op
 
+
+stModOpMSIG minimal_npriv = do
+    let customLogic = "\
+    \(MAX_PUBS = 20),\n\
+    \(N #=< MAX_PUBS),\n\
+    \(N #> 0),\n\
+    \(M #=< N),\n\
+    \(M #> 0),\n\
+
+    \(element(1, Xsints, N)),\n\
+
+    \(PosPUBS #= N + 1),\n\
+    \(PosNPRIVS #= N + 2),\n\
+    \(PosPRIVS #= N + 2 + M),\n\
+
+    \(element(PosPUBS, Xsbs, PUB)),\n\
+    \(PUB in 33\\/65),\n\
+
+    \(element(PosNPRIVS, Xsbs, NPRIVS)),\n\
+    \(NPRIVS in 0..4),\n\
+
+    \(element(PosPRIVS, Xsbs, PRIV)),\n\
+    \(PRIV in 67),\n"
+
+    st <- get
+    let maxPubs = 20
+        maxStackPop = maxPubs*2+2
+        extras = map Var $ take (maxStackPop - length (stack st)) [freshV st,((freshV st)-1)..]
+    let stack' = if null extras
+                  then take maxStackPop (stack st)
+                  else stack st ++ extras
+
+    mapM_ (flip tySet top) extras
+    st' <- get
+
+    let plGen = solveForArgs (st') ["N"] ("Xs",stack') customLogic
+    n_pubs <- case plGen of
+                Left err -> failBranch err
+                Right pl -> do
+                  r <- liftIO $ prologSolve "N" pl
+                  case r of
+                    Left err -> failBranch err
+                    Right i -> return i
+    e_npub <- popStack -- the n_pubs
+    let n_pubsExpr = ConstInt n_pubs
+        npubCnstr = Op e_npub "==" n_pubsExpr
+
+    tySet npubCnstr bool
+    (uncurry tySet) (annotTy n_pubsExpr)
+
+    addCnstr (C_IsTrue npubCnstr)
+
+    ks_pub <- popsStack n_pubs
+
+    e_nprivs <- popStack
+    n_privs <-
+      case convert2Int e_nprivs of
+        Just (ConstInt i) -> return i
+        Nothing -> do
+          let nprivConstant = ConstInt minimal_npriv
+              nprivCnstr = Op e_nprivs "==" nprivConstant
+          addCnstr (C_IsTrue nprivCnstr)
+          tySet nprivCnstr bool
+          (uncurry tySet) (annotTy nprivConstant)
+          return minimal_npriv
+
+    ks_priv <- popsStack n_privs
+    bug <- popStack -- Due to a bug in the Bitcoin core implementation
+    let const0 = ConstInt 0
+        bugCnstr = Op bug "==" const0
+    (uncurry tySet) (annotTy const0)
+    tySet bugCnstr bool
+    addCnstr (C_IsTrue bugCnstr)
+
+    pushStack (MultiSig ks_priv ks_pub) bool
 
 disabledOps =
   [

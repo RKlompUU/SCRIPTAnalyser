@@ -183,11 +183,15 @@ genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
           bPriorCont $ do
             stateSave <- get
 
-            -- Using prolog now to figure out the possible instances for
+            -- Using prolog here to figure out the possible instances for
             -- nPub and nSig that might be viable (we can only use prolog here
             -- to verify if an nPub, nSig pair is valid up to this point of
             -- symbolic execution! Picking any of the solutions prolog finds
-            -- can still result in a symbolic execution error at later instructions
+            -- can still result in a symbolic execution error at later instructions.
+            --
+            -- This is why we backtrack on a thrown error in successCont and retry
+            -- a next viable solution. Until all viable solutions are exhausted,
+            -- in which case the current execution branch is provably unexecutable
 
             let customLogic = "\
             \(MAX_PUBS = 20),\n\

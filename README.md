@@ -30,7 +30,7 @@ The executable (SCRIPTAnalyser-exe) can be executed in any directory of this rep
 
 Call SCRIPTAnalyser-exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument 'help' for information regarding arguments)
 
-For example, if file scriptA contains an output script (in ByteString format, the same format as SCRIPTs occur in the Blockchain itself), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
+For example, if file scriptA contains an output script (in ByteString format, the same format as scripts occur in the Blockchain itself), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
 
 The same but with more verbose output: stack exec SCRIPTAnalyser-exe -- 2 < scriptA
 
@@ -44,7 +44,7 @@ Some example output scripts can be found in folder scripts/
 
 (Note: this only describes the default verbosity output mode)
 
-For every unique branch of the supplied output SCRIPT, the tool will print a verdict under a distinct "--- Symbolic evaluation report of execution branch _i_" section
+For every unique branch of the supplied output script, the tool will print a verdict under a distinct "--- Symbolic evaluation report of execution branch _i_" section
 
 In this section, the following information is printed:
 

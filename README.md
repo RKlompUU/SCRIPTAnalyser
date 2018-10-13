@@ -64,7 +64,7 @@ Instructions on how to interpret the description:\
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- The ".." specifies a range of allowed characters.\
 Any amount of whitespace is allowed between each instruction and between\
 the PUSH keyword and the subsequent bytestring. Parsing starts by applying\
-Start rule.\
+Start rule. Anything after "\#" on a line is treated as a comment (similar to how comments work in Bash).\
 
 
 Start := Instruction*

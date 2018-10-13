@@ -28,19 +28,18 @@ source-repository head
 library
   exposed-modules:
       Lib
-      Parser.AST
-      Parser.Parser
       Constraints.Gen
-    --  Constraints.Solver
-      Constraints.Types
       Constraints.ToProlog
       Constraints.RunProlog
       Constraints.PrologResultParser
+      Parser.SyntaxSugar
       Cryptography
       KlompStandard
   other-modules:
       Paths_SCRIPTAnalyser
-      Parser.SyntaxSugar
+      Parser.AST
+      Parser.Parser
+      Constraints.Types
   hs-source-dirs:
       lib
   build-depends:

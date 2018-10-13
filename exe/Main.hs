@@ -20,7 +20,7 @@ printHelp = do
              "\t\t2: _More_ verbose prints, additionally prints inferred types of expressions, as well as a trace of stack mutations\n" ++
              "\t\t>=3: Verbose prints (debugging mode), additionally prints prolog related information\n" ++
              "\tArg 2 (optional): path for creating temporary prolog code file (default is /tmp/)\n" ++
-             "\tArg 3 (optional): string to prepend the verdict line (useful to track metadata through large batch computations)"
+             "\tArg 3 (optional): string to prepend the verdict line (useful to track metadata through large batch computations)\n\n" ++ genLanguageDocs
   exitFailure
 
 readStdin :: IO String

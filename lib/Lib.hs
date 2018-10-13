@@ -1,6 +1,7 @@
 module Lib
     ( analyseOpenScript
     , serializeScript
+    , genLanguageDocs
     ) where
 
 
@@ -32,6 +33,10 @@ import Control.Monad
 import Constraints.RunProlog
 
 import Parser.SyntaxSugar
+
+genLanguageDocs :: String
+genLanguageDocs =
+  languageDescription
 
 -- |Serialization of Bitcoin scripts. Call this function to translate a script written
 -- in the custom syntax supported by this tool to the serialized format that the scripts

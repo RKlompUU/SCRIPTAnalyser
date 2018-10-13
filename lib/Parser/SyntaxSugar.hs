@@ -12,6 +12,7 @@ import Data.Binary (decode)
 import Numeric (showHex)
 
 import Bitcoin.Script.Integer (asByteString)
+import Data.List
 
 import KlompStandard
 
@@ -21,7 +22,23 @@ type SParser a = Parser Char a
 -- in this custom Bitcoin SCRIPT syntax.
 languageDescription :: String
 languageDescription =
-  undefined
+  let mnemonics = map (intercalate " | ")
+                $ groupList (map (\(m,_) -> "\"" ++ m ++ "\"") memnomic2Hex) 4
+  in "The supported syntax is described below.\n\
+     \Instructions on how to interpret the description: the \"*\" symbol specifies\n\
+     \a repeated parsing of 0 or more times, the \"+\" symbol specifies a repeated\n\
+     \parsing of 1 or more times, the \"|\" specifies an or (either parses\n\
+     \following the left hand side or the right hand side), and \"..\" specifies\n\
+     \a range of allowed characters. Any amount of whitespace is allowed between\n\
+     \each instruction and between the PUSH keyword and the following bytestring.\n\n\
+     \Start := Instruction*\n\n\
+     \Instruction := Push | Mnemonic | Byte\n\
+     \Push := \"PUSH\" Bytestring\n\
+     \Bytestring := Byte+\n\
+     \Byte := Hexadecimal Hexadecimal\n\
+     \Hexadecimal := \"0\"..\"9\" | \"a\"..\"z\" | \"A\"..\"Z\"\n\
+     \Mnemonic := " ++
+     intercalate ("\n" ++ take (length "Mnemonic :") (repeat ' ') ++ "| ") mnemonics
 
 -- |'unsugar' translates a script (of type 'String') written in the custom syntax
 -- supported by this tool to a serialized script format 'String'. It returns 'Left String'

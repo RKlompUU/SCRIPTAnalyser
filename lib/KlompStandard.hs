@@ -20,6 +20,11 @@ import Data.List
 
 type CounterState a = State Int a
 
+groupList :: [a] -> Int -> [[a]]
+groupList xs n =
+  filter (not . null)
+  $ map (\i -> take n $ drop (i*n) xs) [0..(length xs) `div` n]
+
 replaceX :: Eq a => (a,a) -> [a] -> [a]
 replaceX _ [] = []
 replaceX (f,t) (x:xs)

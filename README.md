@@ -30,7 +30,7 @@ The executable (SCRIPTAnalyser-exe) can be executed in any directory of this rep
 
 Call SCRIPTAnalyser-exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument 'help' for information regarding arguments)
 
-For example, if file scriptA contains an output script (in ByteString format, the same format as scripts occur in the Blockchain itself), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
+For example, if file scriptA contains an output script (see below for syntax description, or go to https://vm100.cs.stir.ac.uk/~rkl/docu.php), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
 
 The same but with more verbose output: stack exec SCRIPTAnalyser-exe -- 2 < scriptA
 

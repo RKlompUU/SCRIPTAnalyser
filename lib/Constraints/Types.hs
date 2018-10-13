@@ -153,11 +153,6 @@ convert2Int :: Expr -> Maybe Expr
 convert2Int (ConstInt i) = Just $ ConstInt i
 convert2Int (ConstBS bs)
   | BS.length bs <= 4 = ConstInt <$> return (fromIntegral $ asInteger bs)
-{-
-convert2Int (Abs e) =
-  convert2Int e >>= \i -> case i of
-                            (ConstInt i') -> Just $ ConstInt (if i' < 0 then i' * (-1) else i')
-                            _             -> Nothing -}
 convert2Int _ = Nothing
 
 tryConvert2Int :: Expr -> Expr

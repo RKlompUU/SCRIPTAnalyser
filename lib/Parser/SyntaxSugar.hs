@@ -1,4 +1,4 @@
-module Parser.SyntaxSugar (unsugar, hexInt) where
+module Parser.SyntaxSugar (unsugar, hexInt, languageDescription) where
 
 import Prelude hiding ((<$>), (<*), (*>), (<*>))
 
@@ -17,6 +17,16 @@ import KlompStandard
 
 type SParser a = Parser Char a
 
+-- |'languageDescription' generates a 'String' that documents what is supported
+-- in this custom Bitcoin SCRIPT syntax.
+languageDescription :: String
+languageDescription =
+  undefined
+
+-- |'unsugar' translates a script (of type 'String') written in the custom syntax
+-- supported by this tool to a serialized script format 'String'. It returns 'Left String'
+-- if the given script contains syntax errors, and 'Right String' if translation was
+-- successful.
 unsugar :: String -> Either String String
 unsugar str =
   let res = parse sugarsParser str
@@ -72,6 +82,8 @@ int :: SParser String
 int =
   hexInt <$> (symbol 'i' *> integer)
 
+-- |'hexInt' translates an 'Int' to a hexadecimal 'String' (in same endianness as
+-- the integers in SCRIPT).
 hexInt :: Int -> String
 hexInt i =
   hexBS2Str $ asByteString (fromIntegral i)

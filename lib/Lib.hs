@@ -34,6 +34,8 @@ import Constraints.RunProlog
 
 import Parser.SyntaxSugar
 
+-- |'genlanguageDocs' generates a description of the supported syntax in the custom
+-- SCRIPT language.
 genLanguageDocs :: String
 genLanguageDocs =
   languageDescription

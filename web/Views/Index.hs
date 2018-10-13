@@ -15,8 +15,17 @@ defaultScript :: String
 defaultScript =
   "# Use '#' to start a comment\n\
   \# Whitespaces are allowed anywhere\n\n\
-  \01 01   # PUSH: 1\n\
-  \01 02   # PUSH: 2"
+
+  \# Write bytecodes to specify instructions (e.g. 01 specifies a PUSH of 1 byte)\n\
+  \01 01   # PUSH: 1\n\n\
+
+  \# Alternatively, use the custom language features (e.g. the PUSH keyword, that\n\
+  \# automatically determines the right OP_PUSHDATA Bitcoin instruction).\n\
+  \PUSH 02   # PUSH: 2\n\n\
+
+  \# Or, alternatively, use the i prefix to specify an integer format\n\
+  \PUSH i30   # PUSH: 30\n\
+  \PUSH i-5040 # PUSH: (-5040)"
 
 renderFrontPage = do
   html $ do
@@ -37,12 +46,13 @@ renderAnalysis result = do
       let resultTxt = case result of
                         Left err -> err
                         Right str -> str
-      renderLargeString resultTxt
+      renderLargeString resultTxt True
 
-renderLargeString str = do
+renderLargeString str boundHeight = do
   let lineSplitted = foldl grabLine [[]] str
-      height = min 35
-             $ length lineSplitted + 1
+      height = if boundHeight
+                then min 35 $ length lineSplitted + 1
+                else length lineSplitted + 1
       width = min 100
             $ maximum
             $ Prelude.map length lineSplitted

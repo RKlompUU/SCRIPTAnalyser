@@ -39,7 +39,7 @@ main = do
     get "/analyse" $ do
       oscrpt <- serializeScript <$> param "output_script"
       case oscrpt of
-        Left err -> (blaze $ renderLargeString err) >> (liftIO $ putStrLn "---")
+        Left err -> (blaze $ renderLargeString err True) >> (liftIO $ putStrLn "---")
         Right oscrpt' -> do
           rscrpt <- serializeScript <$> param "redeem_script"
           verStr <- param "verbosity"
@@ -63,5 +63,7 @@ main = do
       return ()
     get "/serialize" $ do
       scrpt <- serializeScript <$> param "script"
-      blaze $ renderLargeString (either id B.unpack scrpt)
+      blaze $ renderLargeString (either id B.unpack scrpt) True
+    get "/languageDocumentation" $ do
+      blaze $ renderLargeString genLanguageDocs False
   putStrLn "Server shutdown\n*******"

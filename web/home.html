@@ -10,7 +10,11 @@
     under which conditions can the script terminate with success (and the coins be redeemed)?<br>
     The technical approach is described in the paper <a href="https://doi.org/10.1007/978-3-030-00305-0_3">On Symbolic Verification of Bitcoin's script Language</a>.<br>
     <br>
-    Try it out below. Enter the output script in bytestring format (i.e. the same format as scripts occur in the Bitcoin Blockchain),<br>or select one of the predefined presets.<br>
+    The tool supports a custom script syntax language. A documentation of this custom language can be found <a href="https://vm100.cs.stir.ac.uk/~rkl/docu.php">here</a>.<br>
+    The custom language is a superset of the script language in Bitcoin transactions.<br>
+    Thus, scripts can be copy pasted from the Bitcoin Blockchain as-is to the input of this tool.<br>
+    <br>
+    Try it out below. Enter the output script, or select one of the predefined presets.<br>
     Optionally fill in additional information below, and when ready hit "Run analysis".<br>
     <br>
     The "Add,subtract.." and "Subtract.." presets additionally illustrate with comments how, internally, a symbolic stack is mutated by the tool.<br>
@@ -183,7 +187,7 @@ OP_ELSE
   OP_0
   PUSH i2
   PUSH 02a1633cafcc01ebfb6d78e39f687a1f0995c62fc95f51ead10a02ee0be551b5dc # <consumer pubkey>
-  PUSH 04e5238ab2a17f0bcae04fc07e421fd7b4f80fc9b8a3f3ab4e5eeb7b255800ec5091d3e5985039bb2580e9758ea186329fbc50bff49d9018a72343c733b437b19f # <provider pubkey>  
+  PUSH 04e5238ab2a17f0bcae04fc07e421fd7b4f80fc9b8a3f3ab4e5eeb7b255800ec5091d3e5985039bb2580e9758ea186329fbc50bff49d9018a72343c733b437b19f # <provider pubkey>
   OP_CHECKMULTISIG
 OP_ENDIF`;
   break;
@@ -191,8 +195,16 @@ OP_ENDIF`;
       document.getElementById("oscript").value = `# Use '#' to start a comment
 # Whitespaces are allowed anywhere
 
+# Write bytecodes to specify instructions (e.g. 01 specifies a PUSH of 1 byte)
 01 01   # PUSH: 1
-01 02   # PUSH: 2`;
+
+# Alternatively, use the custom language features (e.g. the PUSH keyword, that
+# automatically determines the right OP\_PUSH Bitcoin instruction).
+PUSH 02   # PUSH: 2
+
+# Or, alternatively, use the i prefix to specify an integer format
+PUSH i30   # PUSH: 30
+PUSH i-5040 # PUSH: (-5040)`;
     break;
   }
 }

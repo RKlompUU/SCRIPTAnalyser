@@ -7,7 +7,7 @@ SCRIPT Analyser is a tool that infers from a given _output_ script the constrain
 - X\_(0) must be a correct hash pre-image of the constant value present in the output script
 - X\_(-1) must be a correct signature (signing the transaction with the private key that belongs to public key X\_(0))
 
-The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. The tool supports the entire SCRIPT language (i.e. all operations that are permitted according the Bitcoin Core implementation are supported by this tool). 
+The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. The tool supports the entire SCRIPT language (i.e. all operations that are permitted according the Bitcoin Core implementation are supported by this tool).
 
 Try it out online at: https://vm100.cs.stir.ac.uk/~rkl/home.html
 
@@ -52,3 +52,5 @@ In this section, the following information is printed:
 - The symbolic stack that the input script must supply
 - The inferred constraints (on these supplied variables)
 - The final resulting symbolic stack (note, at this point we have already performed an additional OP_VERIFY, thus the constraint that the resulting full execution of this branch must end with a true value on the stack is already in the inferred constraints set)
+
+#### The custom syntax

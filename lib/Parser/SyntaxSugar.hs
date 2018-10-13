@@ -25,12 +25,15 @@ languageDescription =
   let mnemonics = map (intercalate " | ")
                 $ groupList (map (\(m,_) -> "\"" ++ m ++ "\"") memnomic2Hex) 4
   in "The supported syntax is described below.\n\
-     \Instructions on how to interpret the description: the \"*\" symbol specifies\n\
-     \a repeated parsing of 0 or more times, the \"+\" symbol specifies a repeated\n\
-     \parsing of 1 or more times, the \"|\" specifies an or (either parses\n\
-     \following the left hand side or the right hand side), and \"..\" specifies\n\
-     \a range of allowed characters. Any amount of whitespace is allowed between\n\
-     \each instruction and between the PUSH keyword and the following bytestring.\n\n\
+     \Instructions on how to interpret the description:\n\
+     \\t - The \"*\" symbol specifies a repeated parsing of 0 or more times\n\
+     \\t - The \"+\" symbol specifies a repeated parsing of 1 or more times\n\
+     \\t - The \"|\" specifies an or (either parses following the left hand\n\
+     \\t\t side or the right hand side)\n\
+     \\t - The \"..\" specifies a range of allowed characters.\n\
+     \Any amount of whitespace is allowed between each instruction and between\n\
+     \the PUSH keyword and the subsequent bytestring. Parsing starts by applying\n\
+     \Start rule.\n\n\n\
      \Start := Instruction*\n\n\
      \Instruction := Push | Mnemonic | Byte\n\
      \Push := \"PUSH\" Bytestring\n\

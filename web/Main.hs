@@ -20,12 +20,11 @@ import qualified Data.ByteArray.Encoding as BAE
 import Data.Maybe
 
 import Data.Bitcoin.Script
-import Types
 
 import Views.Index
-import Lib
-import Cryptography
-import KlompStandard
+import Bitcoin.Script.Analysis.API
+import Bitcoin.Script.Analysis.Cryptography
+import Bitcoin.Script.Analysis.Standard
 
 blaze = html . renderHtml
 

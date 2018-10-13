@@ -1,10 +1,10 @@
 {-# LANGUAGE GADTs #-}
-module Parser.AST where
+module Bitcoin.Script.Analysis.Parser.AST where
 
 import Data.Bitcoin.Script.Types
 
 import qualified Data.ByteString as BS
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 
 type Label = Int
 

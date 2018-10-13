@@ -1,4 +1,4 @@
-module Lib
+module Bitcoin.Script.Analysis.API
     ( analyseOpenScript
     , serializeScript
     , genLanguageDocs
@@ -7,8 +7,8 @@ module Lib
 
 import Control.Monad
 
-import Parser.Parser
-import Parser.AST
+import Bitcoin.Script.Analysis.Parser.Parser
+import Bitcoin.Script.Analysis.Parser.AST
 import Data.Bitcoin.Script
 import Data.Word (Word8)
 import Data.Binary (Binary)
@@ -26,13 +26,13 @@ import Debug.Trace
 
 import qualified Data.Map.Lazy as M
 
-import KlompStandard
-import Constraints.Gen
-import Constraints.Types
+import Bitcoin.Script.Analysis.Standard
+import Bitcoin.Script.Analysis.Constraints.Gen
+import Bitcoin.Script.Analysis.Constraints.Types
 import Control.Monad
-import Constraints.RunProlog
+import Bitcoin.Script.Analysis.Constraints.RunProlog
 
-import Parser.SyntaxSugar
+import Bitcoin.Script.Analysis.Parser.SyntaxSugar
 
 -- |'genlanguageDocs' generates a description of the supported syntax in the custom
 -- SCRIPT language.

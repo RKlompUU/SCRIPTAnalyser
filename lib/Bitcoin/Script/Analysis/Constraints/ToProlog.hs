@@ -1,6 +1,6 @@
-module Constraints.ToProlog where
+module Bitcoin.Script.Analysis.Constraints.ToProlog where
 
-import Constraints.Types
+import Bitcoin.Script.Analysis.Constraints.Types
 import Data.List
 import Data.Maybe
 import Control.Monad.Except
@@ -12,7 +12,7 @@ import qualified Data.Range.Range as R
 import qualified Data.ByteString as BS
 import Bitcoin.Script.Integer
 
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 
 data ScriptKnowledge =
   ScriptKnowledge {

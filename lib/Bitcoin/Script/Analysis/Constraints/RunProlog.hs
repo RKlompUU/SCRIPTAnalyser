@@ -1,17 +1,17 @@
-module Constraints.RunProlog
+module Bitcoin.Script.Analysis.Constraints.RunProlog
   ( prologVerify, prologSolve ) where
 
-import Constraints.Types
-import Constraints.ToProlog
+import Bitcoin.Script.Analysis.Constraints.Types
+import Bitcoin.Script.Analysis.Constraints.ToProlog
 import Control.Monad
 import System.Process
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 import System.IO.Temp
 import qualified Control.Exception as E
 import Control.Monad.State.Lazy
 import Data.List
 
-import Constraints.PrologResultParser
+import Bitcoin.Script.Analysis.Constraints.PrologResultParser
 
 prologSolve :: [String] -> String -> IO (Either String [(Int,Int)])
 prologSolve vars pl = do

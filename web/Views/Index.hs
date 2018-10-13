@@ -7,9 +7,7 @@ import qualified Text.Blaze.Html5.Attributes as Attr
 
 import Control.Monad.IO.Class
 
-import Types
-
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 
 defaultScript :: String
 defaultScript =

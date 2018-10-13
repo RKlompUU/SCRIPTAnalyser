@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs,DeriveDataTypeable #-}
-module Constraints.Types where
+module Bitcoin.Script.Analysis.Constraints.Types where
 
 import Control.Monad.State.Lazy
 import Control.Monad.Except
@@ -14,9 +14,9 @@ import qualified Data.Range.Range as R
 import qualified Debug.Trace as D
 import Bitcoin.Script.Integer
 
-import Parser.AST
+import Bitcoin.Script.Analysis.Parser.AST
 
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 import qualified Data.Typeable as T
 import qualified Data.Data as TD
 

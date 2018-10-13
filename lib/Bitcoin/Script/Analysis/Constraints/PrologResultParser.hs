@@ -1,4 +1,4 @@
-module Constraints.PrologResultParser
+module Bitcoin.Script.Analysis.Constraints.PrologResultParser
   ( parsePrologPairResults ) where
 
 import Prelude hiding ((<$>), (<*), (*>), (<*>))

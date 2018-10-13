@@ -27,19 +27,19 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
-      Constraints.Gen
-      Constraints.ToProlog
-      Constraints.RunProlog
-      Constraints.PrologResultParser
-      Parser.SyntaxSugar
-      Cryptography
-      KlompStandard
+      Bitcoin.Script.Analysis.API
+      Bitcoin.Script.Analysis.Constraints.Gen
+      Bitcoin.Script.Analysis.Constraints.ToProlog
+      Bitcoin.Script.Analysis.Constraints.RunProlog
+      Bitcoin.Script.Analysis.Constraints.PrologResultParser
+      Bitcoin.Script.Analysis.Parser.SyntaxSugar
+      Bitcoin.Script.Analysis.Cryptography
+      Bitcoin.Script.Analysis.Standard
   other-modules:
       Paths_SCRIPTAnalyser
-      Parser.AST
-      Parser.Parser
-      Constraints.Types
+      Bitcoin.Script.Analysis.Parser.AST
+      Bitcoin.Script.Analysis.Parser.Parser
+      Bitcoin.Script.Analysis.Constraints.Types
   hs-source-dirs:
       lib
   build-depends:
@@ -90,7 +90,6 @@ executable SCRIPTAnalyser-exe
 executable SCRIPTAnalyser-web
   main-is: Main.hs
   other-modules:
-      Types
       Views.Index
       Paths_SCRIPTAnalyser
   hs-source-dirs:

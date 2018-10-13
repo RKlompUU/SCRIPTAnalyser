@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module KlompStandard where
+module Bitcoin.Script.Analysis.Standard where
 
 import qualified Data.Typeable as T
 import qualified Data.Data as TD

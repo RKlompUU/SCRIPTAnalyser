@@ -4,12 +4,12 @@ import System.IO
 import System.Exit
 import System.Environment
 
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 import Data.List
 import Data.Maybe
 
-import Lib
-import Cryptography
+import Bitcoin.Script.Analysis.API
+import Bitcoin.Script.Analysis.Cryptography
 
 printHelp :: IO ()
 printHelp = do

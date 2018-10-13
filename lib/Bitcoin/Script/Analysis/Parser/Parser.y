@@ -1,8 +1,8 @@
 {
-module Parser.Parser where
+module Bitcoin.Script.Analysis.Parser.Parser where
 
 import Data.Bitcoin.Script.Types
-import Parser.AST
+import Bitcoin.Script.Analysis.Parser.AST
 }
 
 %name buildAST

@@ -1,4 +1,4 @@
-module Parser.SyntaxSugar (unsugar, hexInt, languageDescription) where
+module Bitcoin.Script.Analysis.Parser.SyntaxSugar (unsugar, hexInt, languageDescription) where
 
 import Prelude hiding ((<$>), (<*), (*>), (<*>))
 
@@ -14,7 +14,7 @@ import Numeric (showHex)
 import Bitcoin.Script.Integer (asByteString)
 import Data.List
 
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 
 type SParser a = Parser Char a
 

@@ -1,16 +1,16 @@
 {-# LANGUAGE GADTs #-}
-module Constraints.Gen (
+module Bitcoin.Script.Analysis.Constraints.Gen (
   genBuildStates,
   rerunBranch
 ) where
 
-import KlompStandard
+import Bitcoin.Script.Analysis.Standard
 
 import Control.Monad.Trans.Reader
 import Control.Monad.State.Lazy
 import Control.Applicative
 
-import Parser.AST
+import Bitcoin.Script.Analysis.Parser.AST
 import Data.Bitcoin.Script.Types
 
 import qualified Data.ByteString as BS
@@ -19,9 +19,9 @@ import Data.List
 import Data.Maybe
 
 import Bitcoin.Script.Integer
-import Constraints.Types
-import Constraints.ToProlog
-import Constraints.RunProlog
+import Bitcoin.Script.Analysis.Constraints.Types
+import Bitcoin.Script.Analysis.Constraints.ToProlog
+import Bitcoin.Script.Analysis.Constraints.RunProlog
 
 import qualified Data.Map as M
 import qualified Control.Monad.Except as E

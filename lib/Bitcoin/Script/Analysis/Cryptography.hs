@@ -1,4 +1,4 @@
-module Cryptography where
+module Bitcoin.Script.Analysis.Cryptography where
 
 import Crypto.Hash
 

@@ -32,13 +32,13 @@ library
       Bitcoin.Script.Analysis.Constraints.ToProlog
       Bitcoin.Script.Analysis.Constraints.RunProlog
       Bitcoin.Script.Analysis.Constraints.PrologResultParser
-      Bitcoin.Script.Analysis.Parser.SyntaxSugar
+      Bitcoin.Script.Parser.SyntaxSugar
       Bitcoin.Script.Analysis.Cryptography
       Bitcoin.Script.Analysis.Standard
   other-modules:
       Paths_SCRIPTAnalyser
-      Bitcoin.Script.Analysis.Parser.AST
-      Bitcoin.Script.Analysis.Parser.Parser
+      Bitcoin.Script.Parser.AST
+      Bitcoin.Script.Parser.Parser
       Bitcoin.Script.Analysis.Constraints.Types
   hs-source-dirs:
       lib

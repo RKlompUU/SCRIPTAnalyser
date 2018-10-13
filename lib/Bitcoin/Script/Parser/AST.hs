@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs #-}
-module Bitcoin.Script.Analysis.Parser.AST where
+module Bitcoin.Script.Parser.AST where
 
 import Data.Bitcoin.Script.Types
 

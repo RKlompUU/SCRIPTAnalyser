@@ -1,4 +1,4 @@
-module Bitcoin.Script.Analysis.Parser.SyntaxSugar (unsugar, hexInt, languageDescription) where
+module Bitcoin.Script.Parser.SyntaxSugar (unsugar, hexInt, languageDescription) where
 
 import Prelude hiding ((<$>), (<*), (*>), (<*>))
 

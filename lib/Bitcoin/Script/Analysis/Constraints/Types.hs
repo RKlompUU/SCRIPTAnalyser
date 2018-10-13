@@ -14,7 +14,7 @@ import qualified Data.Range.Range as R
 import qualified Debug.Trace as D
 import Bitcoin.Script.Integer
 
-import Bitcoin.Script.Analysis.Parser.AST
+import Bitcoin.Script.Parser.AST
 
 import Bitcoin.Script.Analysis.Standard
 import qualified Data.Typeable as T

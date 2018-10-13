@@ -7,8 +7,8 @@ module Bitcoin.Script.Analysis.API
 
 import Control.Monad
 
-import Bitcoin.Script.Analysis.Parser.Parser
-import Bitcoin.Script.Analysis.Parser.AST
+import Bitcoin.Script.Parser.Parser
+import Bitcoin.Script.Parser.AST
 import Data.Bitcoin.Script
 import Data.Word (Word8)
 import Data.Binary (Binary)
@@ -32,7 +32,7 @@ import Bitcoin.Script.Analysis.Constraints.Types
 import Control.Monad
 import Bitcoin.Script.Analysis.Constraints.RunProlog
 
-import Bitcoin.Script.Analysis.Parser.SyntaxSugar
+import Bitcoin.Script.Parser.SyntaxSugar
 
 -- |'genLanguageDocs' generates a description of the supported syntax in the custom
 -- SCRIPT language.

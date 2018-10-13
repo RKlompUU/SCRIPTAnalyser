@@ -35,7 +35,7 @@ genBuildStates script
   <$> zip [0..]
   <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (map (\a -> a (return ())) (runReader (genCnstrs script) id))
 
--- |Returns 'Just' 'ScriptOp' if the script contains an instructions that renders the
+-- |Returns 'Just' 'ScriptOp' if the script contains an instruction that renders the
 -- entire script illegal (nonredeemable).
 astOK :: ScriptAST -> Maybe ScriptOp
 astOK (ScriptOp _ op cont)

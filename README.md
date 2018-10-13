@@ -70,7 +70,9 @@ Start rule. Anything after "\#" on a line is treated as a comment (similar to ho
 Start := Instruction*
 
 Instruction := Push | Mnemonic | Byte\
-Push := "PUSH" Bytestring\
+Push := "PUSH" Bytestring  | "PUSH" Integer\
+Integer := "i" Num+ | "i-" Num+\
+Num := "0".."9"\
 Bytestring := Byte+\
 Byte := Hexadecimal Hexadecimal\
 Hexadecimal := "0".."9" | "a".."z" | "A".."Z"\

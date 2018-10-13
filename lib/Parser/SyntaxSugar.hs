@@ -37,7 +37,9 @@ languageDescription =
      \to how comments work in Bash).\n\n\n\
      \Start := Instruction*\n\n\
      \Instruction := Push | Mnemonic | Byte\n\
-     \Push := \"PUSH\" Bytestring\n\
+     \Push := \"PUSH\" Bytestring | \"PUSH\" Integer\n\
+     \Integer := \"i\" Num+ | \"i-\" Num+\n\
+     \Num := \"0\"..\"9\"\n\
      \Bytestring := Byte+\n\
      \Byte := Hexadecimal Hexadecimal\n\
      \Hexadecimal := \"0\"..\"9\" | \"a\"..\"z\" | \"A\"..\"Z\"\n\

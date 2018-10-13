@@ -1,5 +1,8 @@
 {-# LANGUAGE GADTs #-}
-module Constraints.Gen where
+module Constraints.Gen (
+  genBuildStates,
+  rerunBranch
+) where
 
 import KlompStandard
 
@@ -23,13 +26,19 @@ import Constraints.RunProlog
 import qualified Data.Map as M
 import qualified Control.Monad.Except as E
 
-
+-- |'genBuildStates' generates, for each execution branch in the given script (of type
+-- 'ScriptAST'), an analysis report.
 genBuildStates :: ScriptAST -> IO [BranchReport]
 genBuildStates script
   = map (\(i,r) -> r { branchID = i })
   <$> zip [0..]
   <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (map (\a -> a (return ())) (runReader (genCnstrs script) id))
 
+-- |'rerunBranch' reruns the analysis of a branch, and continues with the
+-- next viable instantiation of one of the variables that require an exhaustive
+-- search. This function is called when a branch execution was found that turned
+-- out to contain contradictions in the imposed constraints, and still has untried
+-- possibly viable instantiations of 1 or more variables.
 rerunBranch :: BranchReport -> IO BranchReport
 rerunBranch bReport = do
   (\r -> r { branchID = branchID bReport, branchBuilder = branchBuilder bReport })
@@ -38,12 +47,22 @@ rerunBranch bReport = do
 finalizeBranch :: BranchBuilder ()
 finalizeBranch = do
   e <- popStack
-  --tySet e bool
   addCnstr (C_IsTrue e)
 
-
+-- |'BranchCont' takes the continuation 'BranchBuilder ()'. At each inspected instruction,
+-- when closed off by passing the continuation 'BranchBuilder ()', it is mutated into
+-- a new continuation. This setup allows to catch at each inspected instruction
+-- any analysis errors thrown during the analysis of subsequent instructions. This
+-- enables the backtracking feature used during analysis of OP_CHECKMULTISIG, OP_ROLL
+-- and OP_PICK.
 type BranchCont = BranchBuilder () -> BranchBuilder ()
---                                 \continuation -> current >> continuation
+-- |'ConstraintBuilder' constructs the symbolic execution monad of each
+-- execution branch. The Reader contains the BranchCont built up to a
+-- currently inspected instruction, and eventually returns a list of
+-- BranchCont (one entry per execution branch). The resulting BranchConts
+-- then only need to be closed with an initial BranchBuilder () instance, finally
+-- resulting in a constructed BranchBuilder () monad for each execution branch.
+-- These monads can then be ran to obtain the actual analysis results.
 type ConstraintBuilder = Reader BranchCont [BranchCont]
 
 
@@ -98,6 +117,11 @@ pushStack_ e = do
 pushsStack_ :: [Expr] -> BranchBuilder ()
 pushsStack_ es = mapM_ pushStack_ es
 
+-- |'peakStack' returns the 'Expr' that is at the top of the stack. Note that this
+-- function does have a side effect. If the symbolic stack is empty, a new 'Var'
+-- is instantiated, as a consequence this will add a constraint that the input script
+-- must instantiate this variable. Thus, only call 'peakStack' at places in the analysis
+-- where the actual Bitcoin Core client would require a variable to be present!
 peakStack :: BranchBuilder Expr
 peakStack = do
   v <- popStack
@@ -120,6 +144,7 @@ opStack op = do
 --
 -- Alternative stack operations
 --
+
 genAltV :: BranchBuilder Expr
 genAltV = do
   st <- get
@@ -148,12 +173,20 @@ pushAltStack e = do
 -- Main constraint generation functions
 --
 
+-- |'withReaderCont' is the default continuation builder.
 withReaderCont :: BranchBuilder () -> ConstraintBuilder -> ConstraintBuilder
 withReaderCont b cCont = do
   withReader r $ cCont
   where r :: BranchCont -> BranchCont
         r bPriorCont = \after -> bPriorCont (b >> after)
 
+-- |'tryContinuations' is a more advanced continuation builder, that attempts a list
+-- of instantiations associated to a variable at the instruction of unique label 'Ident'.
+-- Each time an error is thrown during an attempted instantiation, it catches the error
+-- and retries another continuation using the next viable instantiation.
+--
+-- OP_CHECKMULTISIG, OP_PICK and OP_ROLL use this continuation builder to backtrack
+-- every time a possible solution turns out to contain type errors.
 tryContinuations :: (Show a, Eq a) => Ident -> [a] -> (a -> BranchBuilder ()) -> BranchBuilder () -> BranchBuilder [a]
 tryContinuations ident [] _ _ = failBranch $ "No possible continuation left for " ++ show ident ++ "!"
 tryContinuations ident (x:xs) b bCont = do
@@ -166,17 +199,15 @@ tryContinuations ident (x:xs) b bCont = do
                         then failBranch e
                         else put stateSave >> tryContinuations ident xs b bCont)
 
+-- |'noteBranchJump' logs an execution branch decision point 'Bool', made at the OP_IF
+-- that has unique label 'Label'.
 noteBranchJump :: Label -> Bool -> BranchBuilder ()
 noteBranchJump lbl b = do
   st <- get
   put $ st { branchInfo = (lbl,b) : branchInfo st }
 
-branched :: (Bool -> BranchBuilder ()) ->
-            Bool ->
-            ScriptAST ->
-            ConstraintBuilder
-branched f b cont = withReaderCont (f b) (genCnstrs cont)
 
+-- |'genCnstrs' is the core branch analysis builder.
 genCnstrs :: ScriptAST -> ConstraintBuilder
 genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
   let stModITE = (\b -> do
@@ -189,8 +220,8 @@ genCnstrs (ScriptITE ifLbl b0 elseLbl b1 fiLbl cont) = do
                         else addCnstr (C_IsTrue $ Not v) >>
                              tySet (Not v) genTrue
                  )
-  ss0 <- branched stModITE True b0
-  ss1 <- branched stModITE False b1
+  ss0 <- withReaderCont (stModITE True) $ genCnstrs b0
+  ss1 <- withReaderCont (stModITE False) $ genCnstrs b1
   concat <$> mapM (\s -> local (const s) (genCnstrs cont)) (ss0 ++ ss1)
 
 genCnstrs (ScriptOp lbl OP_ROLL cont) = do
@@ -331,6 +362,11 @@ verboseLog ioPrint str = do
     else return ()
 
 
+-- |'stModOp' defines for the basic operations the symbolic execution.
+-- The basic operations are those that that do not impose multiple possible execution
+-- branches, nor pose multiple possible instantiations for some variable that need
+-- to be tried exhaustively until 1 instantiation is found that creates a type correct
+-- and constraint consistent symbolic execution.
 stModOp :: ScriptOp -> BranchBuilder ()
 stModOp (OP_PUSHDATA bs _) = (uncurry pushStack) (annotTy (ConstBS bs))
 
@@ -610,7 +646,6 @@ stModOpRoll n = do
   e_n <- popStack
   pushsStack_ es
   pushStack_ e_n
-
 
 stModOpPick n = do
   e <- popStack

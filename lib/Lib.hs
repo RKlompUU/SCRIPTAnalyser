@@ -46,8 +46,7 @@ serializeScript str =
 -- |'analyseOpenScript' performs a static analysis on a given open script. "open"
 -- denotes a script that is not complete, and that can be "closed" by prepending an
 -- arbitrary set of instructions. In Bitcoin's transactions the output scripts are
--- "open", and are closed by the input scripts. 'analyseOpenScript' should be passed
--- the output (or redeem) script that you want to verify. For each execution branch
+-- "open", and are closed by the input scripts. For each execution branch
 -- in the open script, 'analyseOpenScript': verifies if it is type correct, derives
 -- the constraints that an execution of this branch imposes on the prepended input
 -- script, and, if these constraints contain contradictions it tries to prove that

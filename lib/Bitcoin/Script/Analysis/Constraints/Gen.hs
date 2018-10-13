@@ -1,7 +1,8 @@
 {-# LANGUAGE GADTs #-}
 module Bitcoin.Script.Analysis.Constraints.Gen (
   genBuildStates,
-  rerunBranch
+  rerunBranch,
+  astOK
 ) where
 
 import Bitcoin.Script.Analysis.Standard
@@ -33,6 +34,25 @@ genBuildStates script
   = map (\(i,r) -> r { branchID = i })
   <$> zip [0..]
   <$> mapM (\s -> unwrapBuildMonad (s >> finalizeBranch)) (map (\a -> a (return ())) (runReader (genCnstrs script) id))
+
+-- |Returns 'Just' 'ScriptOp' if the script contains an instructions that renders the
+-- entire script illegal (nonredeemable).
+astOK :: ScriptAST -> Maybe ScriptOp
+astOK (ScriptOp _ op cont)
+  | isJust op' = op'
+  | otherwise = astOK cont
+  where op' = find (== op) notOkOps
+astOK (ScriptITE _ b1 _ b2 _ cont) =
+  let b1' = astOK b1
+      b2' = astOK b2
+      cont' = astOK cont
+  in if isJust b1'
+      then b1'
+      else if isJust b2'
+            then b2'
+            else cont'
+astOK ScriptTail =
+  Nothing
 
 -- |'rerunBranch' reruns the analysis of a branch, and continues with the
 -- next viable instantiation of one of the variables that require an exhaustive
@@ -710,11 +730,10 @@ disabledOps =
   OP_RSHIFT,
 
   OP_VER,
-  OP_RESERVED,
+  OP_RESERVED
+  ]
 
-   -- TODO: If one of the following operations are present,
-   --       it should make the ENTIRE script incorrect
-   --       (not just the execution branch it is in)
+notOkOps = [
   OP_VERNOTIF,
   OP_VERIF
   ]

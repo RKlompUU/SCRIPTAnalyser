@@ -1,0 +1,17 @@
+OP_IF
+  PUSH i700000 # Expiration: block number 700,000
+  OP_CHECKLOCKTIMEVERIFY
+  OP_DROP
+  PUSH 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d # <consumer pubkey>
+  OP_CHECKSIG
+OP_ELSE
+  OP_VERNOTIF
+  OP_0
+  OP_ROT
+  OP_ROT
+  PUSH i2
+  PUSH 5e4ff47ceb3a51cdf7ddd80afc4acc5a692dac2d # <consumer pubkey>
+  PUSH 0000f47ceb3a510000000000fc4acc5a69200000 # <provider pubkey>
+  PUSH i2
+  OP_CHECKMULTISIG
+OP_ENDIF

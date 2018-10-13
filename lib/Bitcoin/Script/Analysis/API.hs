@@ -82,31 +82,35 @@ analyseOpenScript_ bs dir preVerdict verbosity = do
   let script = decode bs
 
   let ast = runFillLabels $ buildAST (scriptOps script)
-  branchReports <- lift $ lift $ genBuildStates ast
-  branchReports' <- mapM (prologVerify (\report -> rerunBranch report) dir) branchReports
+      maybeNotOK = astOK ast :: Maybe ScriptOp
+  if isJust maybeNotOK
+    then tell (preVerdict ++ "Script ast is not OK! Nonredeemable due to a presence of: " ++ show (fromJust maybeNotOK))
+    else do
+      branchReports <- lift $ lift $ genBuildStates ast
+      branchReports' <- mapM (prologVerify (\report -> rerunBranch report) dir) branchReports
 
-  when (verbosity >= 2) $ do
-      tell "SCRIPT echo, followed by the lexed intermediate variant:\n"
-      tell $ (show $ bs) ++ "\n"
-      tell $ (show script) ++ "\n"
-  when (verbosity >= 1) $ do -- Verbose section
-      tell $ "-------------------------\n"
-      tell $ "---------- AST ----------\n"
-      tell $ show ast
+      when (verbosity >= 2) $ do
+          tell "SCRIPT echo, followed by the lexed intermediate variant:\n"
+          tell $ (show $ bs) ++ "\n"
+          tell $ (show script) ++ "\n"
+      when (verbosity >= 1) $ do -- Verbose section
+          tell $ "-------------------------\n"
+          tell $ "---------- AST ----------\n"
+          tell $ show ast
 
-      tell $ "-------------------------\n"
-      tell $ "-------- Inferred -------\n"
-      tell $ dumpBranchReports branchReports' verbosity
+          tell $ "-------------------------\n"
+          tell $ "-------- Inferred -------\n"
+          tell $ dumpBranchReports branchReports' verbosity
 
-  tell $ "------------------------\n"
-  tell $ "-------- Verdict -------\n"
+      tell $ "------------------------\n"
+      tell $ "-------- Verdict -------\n"
 
-  let successBuilds = filter (prologValid) branchReports'
+      let successBuilds = filter (prologValid) branchReports'
 
-  -- Non verbose section.
-  if (null successBuilds)
-    then tell (preVerdict ++ "nonredeemable")
-    else tell (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") -- >> exitSuccess
+      -- Non verbose section.
+      if (null successBuilds)
+        then tell (preVerdict ++ "nonredeemable")
+        else tell (preVerdict ++ "types correct, " ++ show (length successBuilds) ++ " branch(es) viable") -- >> exitSuccess
 
 dumpList :: [String] -> String
 dumpList xs =

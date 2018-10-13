@@ -34,7 +34,7 @@ import Bitcoin.Script.Analysis.Constraints.RunProlog
 
 import Bitcoin.Script.Analysis.Parser.SyntaxSugar
 
--- |'genlanguageDocs' generates a description of the supported syntax in the custom
+-- |'genLanguageDocs' generates a description of the supported syntax in the custom
 -- SCRIPT language.
 genLanguageDocs :: String
 genLanguageDocs =

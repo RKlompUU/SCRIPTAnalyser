@@ -21,7 +21,7 @@ defaultScript =
 
   \# Alternatively, use the custom language features (e.g. the PUSH keyword, that\n\
   \# automatically determines the right OP_PUSHDATA Bitcoin instruction).\n\
-  \PUSH 02   # PUSH: 2\n\n\
+  \PUSH 02adefDEAFBEEF   # PUSH: 02adefDEAFBEEF\n\n\
 
   \# Or, alternatively, use the i prefix to specify an integer format\n\
   \PUSH i30   # PUSH: 30\n\

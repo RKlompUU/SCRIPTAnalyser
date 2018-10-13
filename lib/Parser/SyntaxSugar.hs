@@ -33,7 +33,8 @@ languageDescription =
      \\t - The \"..\" specifies a range of allowed characters.\n\
      \Any amount of whitespace is allowed between each instruction and between\n\
      \the PUSH keyword and the subsequent bytestring. Parsing starts by applying\n\
-     \Start rule.\n\n\n\
+     \Start rule. Anything after \"#\" on a line is treated as a comment (similar\n\
+     \to how comments work in Bash).\n\n\n\
      \Start := Instruction*\n\n\
      \Instruction := Push | Mnemonic | Byte\n\
      \Push := \"PUSH\" Bytestring\n\

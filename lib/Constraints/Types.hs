@@ -587,15 +587,15 @@ instance Show BranchMutation where
 instance Show BuildState where
   show s = "BuildState {\n\tty_cnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (M.toList $ ty_cnstrs s))) ++
             "\n\tval_cnstrs:\n\t\t" ++ (intercalate "\n\t\t" (map show (val_cnstrs s))) ++
-           ",\n\tstack:{\n" ++ printStack (stack s) ++ "}" ++
+           ",\n\tstack:{\n" ++ printListAsStack (stack s) ++ "}" ++
            ",\n\taltStack:{\n" ++ show (altStack s) ++ "}" ++
            ",\n\tbranch history:\n\t.. " ++
            intercalate "\n\t.. " (map show $ (reverse $ muts s))
 
 
-printStack :: Show a => [a] -> String
-printStack [] = "head -> |------------------|\n"
-printStack (x:xs) =
+printListAsStack :: Show a => [a] -> String
+printListAsStack [] = "head -> |------------------|\n"
+printListAsStack (x:xs) =
   let sep = "\t|------------------|\n"
       xs' = concatMap (\e -> "\t| " ++ show e ++ "\n") xs
       x'  = "head -> | " ++ show x ++ "\n"

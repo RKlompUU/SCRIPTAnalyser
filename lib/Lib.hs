@@ -33,11 +33,36 @@ import Constraints.RunProlog
 
 import Parser.SyntaxSugar
 
-
+-- |Serialization of Bitcoin scripts. Call this function to translate a script written
+-- in the custom syntax supported by this tool to the serialized format that the scripts
+-- occur in on the Bitcoin blockchain.
+-- 'serializeScript' parses the given script (of type 'String'), returning either:
+--  'Left' errorMessage if the script cannot be parsed (due to a syntax error), or
+--  'Right' scrptByteString if the script was parsed successfully.
 serializeScript :: String -> Either String B.ByteString
 serializeScript str =
   B.pack <$> unsugar str
 
+-- |'analyseOpenScript' performs a static analysis on a given open script. "open"
+-- denotes a script that is not complete, and that can be "closed" by prepending an
+-- arbitrary set of instructions. In Bitcoin's transactions the output scripts are
+-- "open", and are closed by the input scripts. 'analyseOpenScript' should be passed
+-- the output (or redeem) script that you want to verify. For each execution branch
+-- in the open script, 'analyseOpenScript': verifies if it is type correct, derives
+-- the constraints that an execution of this branch imposes on the prepended input
+-- script, and, if these constraints contain contradictions it tries to prove that
+-- the constraints cannot be solved (through application of swi-prolog).
+--
+-- If all execution branches of the open script contain either type errors or have
+-- been proven to impose contradicting constraints, then the open script is unredeemable.
+--
+-- 'analyseOpenScript' takes 4 arguments: the open script (in serialized format
+-- of type 'B.ByteString'), a directory path (of type 'String') in which files can
+--  be written to (this is used to communicate to swi-prolog), a message which is
+--  prepended to the verdict message (of type 'String'), and a number which sets
+-- the verbosity of logging (of type 'Int'). It returns either: 'Left' errorMessage
+-- (if something went wrong, for example the given open script is not a valid Bitcoin
+-- script), or 'Right' verdict.
 analyseOpenScript :: B.ByteString -> String -> String -> Int -> IO (Either String String)
 analyseOpenScript scrpt dir preVerdict verbosity = do
   result <- E.catch ((runWriterT (runExceptT (analyseOpenScript_ scrpt dir preVerdict verbosity))))
@@ -94,9 +119,9 @@ dumpBranchReport report verbosity =
       trace = "Stack trace:\n\t" ++
               (intercalate "\n\t" $ map show (reverse $ muts bs))
       initialStack = "Required initial main stack:\n" ++
-                     printStack (map Var [0,(-1)..freshV bs+1])
+                     printListAsStack (map Var [0,(-1)..freshV bs+1])
       initialAltStack = "Required initial alternative stack:\n" ++
-                        printStack (map AltVar [0,(-1)..freshAltV bs+1])
+                        printListAsStack (map AltVar [0,(-1)..freshAltV bs+1])
       vconstrs = "Inferred constraints:\n\t" ++
                  (intercalate "\n\t" $ map show (filter (not . isSpecCnstr) $ val_cnstrs bs))
       tconstrs = "Inferred types:\n\t" ++

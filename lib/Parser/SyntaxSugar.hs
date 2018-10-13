@@ -47,8 +47,8 @@ languageDescription =
      intercalate ("\n" ++ take (length "Mnemonic :") (repeat ' ') ++ "| ") mnemonics
 
 -- |'unsugar' translates a script (of type 'String') written in the custom syntax
--- supported by this tool to a serialized script format 'String'. It returns 'Left String'
--- if the given script contains syntax errors, and 'Right String' if translation was
+-- supported by this tool to a serialized script format 'String'. It returns 'Left' 'String'
+-- if the given script contains syntax errors, and 'Right' 'String' if translation was
 -- successful.
 unsugar :: String -> Either String String
 unsugar str =

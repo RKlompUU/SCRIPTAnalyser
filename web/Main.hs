@@ -33,8 +33,6 @@ main = do
   putStrLn "*******\nServer booted"
   scotty 3000 $ do
     middleware logStdoutDev
-    get "/" $ do
-      blaze $ renderFrontPage
     get "/analyse" $ do
       oscrpt <- serializeScript <$> param "output_script"
       case oscrpt of

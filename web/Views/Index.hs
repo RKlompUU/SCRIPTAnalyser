@@ -9,34 +9,6 @@ import Control.Monad.IO.Class
 
 import Bitcoin.Script.Analysis.Standard
 
-defaultScript :: String
-defaultScript =
-  "# Use '#' to start a comment\n\
-  \# Whitespaces are allowed anywhere\n\n\
-
-  \# Write bytecodes to specify instructions (e.g. 01 specifies a PUSH of 1 byte)\n\
-  \01 01   # PUSH: 1\n\n\
-
-  \# Alternatively, use the custom language features (e.g. the PUSH keyword, that\n\
-  \# automatically determines the right OP_PUSHDATA Bitcoin instruction).\n\
-  \PUSH 02adefDEAFBEEF   # PUSH: 02adefDEAFBEEF\n\n\
-
-  \# Or, alternatively, use the i prefix to specify an integer format\n\
-  \PUSH i30   # PUSH: 30\n\
-  \PUSH i-5040 # PUSH: (-5040)"
-
-renderFrontPage = do
-  html $ do
-    body $ do
-      h1 "Front Page"
-      form ! (Attr.action "/analyse") $ do
-        textarea ! Attr.name "output_script" ! Attr.cols "80" ! Attr.rows "40" $ toHtml defaultScript
-        br
-        input ! Attr.type_ "submit"
-        -- Blaze.span $ toHtml ("test" :: String)
-    --  ul $ do
-  --      mapM_ (li . renderPubEntry) content
-
 renderAnalysis result = do
   html $ do
     body $ do

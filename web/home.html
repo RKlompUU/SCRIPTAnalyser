@@ -28,12 +28,18 @@
         <tr>
           <td>
             <textarea id="oscript" name="output_script" cols="80" rows="15">
-# Enter your output script here
-# Use &#39;#&#39; to start a comment
-# Whitespaces are allowed anywhere
+# Use '#' to start a comment
 
+# Write bytecodes to specify instructions (e.g. 01 specifies a PUSH of 1 byte)
 01 01   # PUSH: 1
-01 02   # PUSH: 2
+
+# Alternatively, use the custom language syntax (e.g. the PUSH keyword, that
+# automatically determines the right OP\_PUSHDATA Bitcoin instruction).
+PUSH 02adefDEAFBEEF   # PUSH: 02adefDEAFBEEF
+
+# Or, alternatively, use the i prefix to specify an integer format
+PUSH i30   # PUSH: 30
+PUSH i-5040 # PUSH: (-5040)
             </textarea>
           </td>
           <td>
@@ -193,12 +199,11 @@ OP_ENDIF`;
   break;
     default:
       document.getElementById("oscript").value = `# Use '#' to start a comment
-# Whitespaces are allowed anywhere
 
 # Write bytecodes to specify instructions (e.g. 01 specifies a PUSH of 1 byte)
 01 01   # PUSH: 1
 
-# Alternatively, use the custom language features (e.g. the PUSH keyword, that
+# Alternatively, use the custom language syntax (e.g. the PUSH keyword, that
 # automatically determines the right OP\_PUSHDATA Bitcoin instruction).
 PUSH 02adefDEAFBEEF   # PUSH: 02adefDEAFBEEF
 

@@ -77,7 +77,7 @@ theFlags lbi = configConfigurationsFlags $ configFlags lbi
 
 doCompileWithAsm :: LocalBuildInfo -> Bool
 doCompileWithAsm lbi =
-  case lookup (mkFlagName "x86asm") (theFlags lbi) of
+  case lookup (mkFlagName "x86asm") (unFlagAssignment $ theFlags lbi) of
     Nothing -> False
     Just b  -> b
 

@@ -14,7 +14,7 @@ import qualified Data.Range.Range as R
 import qualified Debug.Trace as D
 import Bitcoin.Script.Integer
 
-import Bitcoin.Script.Parser.AST
+import Bitcoin.Script.Parser.API
 
 import Bitcoin.Script.Analysis.Standard
 import qualified Data.Typeable as T
@@ -24,6 +24,8 @@ import qualified Data.Bitcoin.Script.Types as Bitcoin
 
 import Control.Monad.Except
 import Control.Monad.Writer
+
+type Label = Int
 
 type Ident = Int
 type OpIdent = String

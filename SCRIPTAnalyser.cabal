@@ -32,13 +32,10 @@ library
       Bitcoin.Script.Analysis.Constraints.ToProlog
       Bitcoin.Script.Analysis.Constraints.RunProlog
       Bitcoin.Script.Analysis.Constraints.PrologResultParser
-      Bitcoin.Script.Parser.SyntaxSugar
       Bitcoin.Script.Analysis.Cryptography
       Bitcoin.Script.Analysis.Standard
   other-modules:
       Paths_SCRIPTAnalyser
-      Bitcoin.Script.Parser.AST
-      Bitcoin.Script.Parser.Parser
       Bitcoin.Script.Analysis.Constraints.Types
   hs-source-dirs:
       lib
@@ -67,7 +64,8 @@ library
       bitcoin-hs,
       array >= 0.5.2.0,
       transformers,
-      process
+      process,
+      SCRIPTWriter >= 1.0
   default-language: Haskell2010
 
 executable SCRIPTAnalyser-exe

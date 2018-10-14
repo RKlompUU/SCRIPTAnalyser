@@ -34,11 +34,13 @@ main = do
   scotty 3000 $ do
     middleware logStdoutDev
     get "/analyse" $ do
-      oscrpt <- serializeScript <$> param "output_script"
+      oscrptTxt <- param "output_script"
+      let oscrpt = serializeScript oscrptTxt
       case oscrpt of
         Left err -> (blaze $ renderLargeString err True) >> (liftIO $ putStrLn "---")
         Right oscrpt' -> do
-          rscrpt <- serializeScript <$> param "redeem_script"
+          rscrptTxt <- param "redeem_script"
+          let rscrpt = serializeScript rscrptTxt
           verStr <- param "verbosity"
           let ver = if all (\c -> any (c==) ['0'..'9']) verStr
                       then read verStr :: Int
@@ -51,9 +53,9 @@ main = do
                             let rHash = hash160 rscrpt'
                                 rscrptHash' = BAE.convertToBase BAE.Base16 rscrptHash
                             in if BL.toStrict rHash == rscrptHash'
-                              then liftIO $ analyseOpenScript rscrpt' "/tmp/" "" ver
+                              then liftIO $ analyseOpenScript rscrptTxt "/tmp/" "" ver
                               else return $ Left $ "Error: hash in output script does not equal hash of redeem script!\n\nHash inside output script: " ++ show rscrptHash' ++ "\nActual hash of redeem script: " ++ show rHash
-                      otherwise -> liftIO $ analyseOpenScript oscrpt' "/tmp/" "" ver
+                      otherwise -> liftIO $ analyseOpenScript oscrptTxt "/tmp/" "" ver
           blaze $ renderAnalysis result
           liftIO $ putStrLn "---"
     get "/submitInfo" $ do

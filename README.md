@@ -55,4 +55,4 @@ In this section, the following information is printed:
 
 #### Custom SCRIPT syntax
 
-Scripts can be specified using an extended SCRIPT language (which is a superset of the bytestring SCRIPT language). Visit https://vm100.cs.stir.ac.uk/%7Erkl/docu.php, or https://github.com/RKlompUU/SCRIPTWriter, for a description of the extended language's syntax.
+Scripts can be specified using an extended SCRIPT language (which is a superset of the bytestring SCRIPT language). Visit https://vm100.cs.stir.ac.uk/~rkl/docu.php, or https://github.com/RKlompUU/SCRIPTWriter, for a description of the extended language's syntax.

@@ -37,16 +37,16 @@ resolver: lts-12.13
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - .
-- .pulledLibs/range-0.1.3.0
-- .pulledLibs/bitcoin-script
-- .pulledLibs/bitcoin-hs-0.0.1
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
 - temporary-1.3
 - directory-1.3.3.1
 - uu-tc-2015.1.1
-- SCRIPTWriter-1.0
+- SCRIPTWriter-1.0.1
+- .pulledLibs/range-0.1.3.0
+- .pulledLibs/bitcoin-script
+- .pulledLibs/bitcoin-hs-0.0.1
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

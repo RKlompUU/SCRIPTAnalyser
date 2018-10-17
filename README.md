@@ -1,6 +1,6 @@
 # SCRIPT Analyser
-## Symbolic verification of Bitcoin's output scripts
 ![Alt text](.imgs/outputExampleA.png?raw=true "Example")
+## Symbolic verification of Bitcoin's output scripts
 
 SCRIPT Analyser is a tool that infers from a given _output_ script the constraints that must be met by an _input_ script to create a valid transaction. Consider for example a standard P2PKH output script, the tool will report that a correct input script must:
 - establish a stack containing 2 entries: X\_(0) and X\_(-1) (with X\_(0) at the head of the stack)
@@ -55,4 +55,4 @@ In this section, the following information is printed:
 
 #### Custom SCRIPT syntax
 
-Scripts can be specified using an extended SCRIPT language (which is a superset of the bytestring SCRIPT language). Visit https://vm100.cs.stir.ac.uk/%7Erkl/docu.php, or https://github.com/RKlompUU/SCRIPTWriter, for a description of the extended language's syntax.
+Scripts can be specified using an extended SCRIPT language (which is a superset of the bytestring SCRIPT language). Visit https://vm100.cs.stir.ac.uk/~rkl/docu.php, or https://github.com/RKlompUU/SCRIPTWriter, for a description of the extended language's syntax.

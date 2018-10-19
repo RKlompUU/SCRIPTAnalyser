@@ -41,7 +41,7 @@ astOK :: ScriptAST -> Maybe ScriptOp
 astOK (ScriptOp _ op cont)
   | isJust op' = op'
   | otherwise = astOK cont
-  where op' = find (== op) notOkOps
+  where op' = find (== op) bannedOPs
 astOK (ScriptITE _ b1 _ b2 _ cont) =
   let b1' = astOK b1
       b2' = astOK b2
@@ -648,7 +648,7 @@ stModOp OP_CHECKSEQUENCEVERIFY = do
   addCnstr (C_Spec lBit22_)
 
 -- DISABLED OP_CODES
-stModOp op | any (== op) disabledOps = failBranch $ "Error, disabled OP used: " ++ show op
+stModOp op | any (== op) disabledOPs = failBranch $ "Error, disabled OP used: " ++ show op
 
 stModOp op =
   failBranch $ "Error, no stModOp implementation for operator: " ++ show op
@@ -714,7 +714,12 @@ stModOpMSIG nPub nSig = do
 
   pushStack (MultiSig sigs pubs) bool
 
-disabledOps =
+-- | The following instructions (defined by the 'disabledOPs' list) have been disabled
+-- by the bitcoin core client. Upon encountering any one of these in an execution,
+-- an error is thrown and the execution is deemed unsuccesful. This means that
+-- they can be present in correct scripts, as long as the specific execution branch
+-- taken during evaluation does not contain these.
+disabledOPs =
   [
   OP_CAT,
   OP_SUBSTR,
@@ -738,7 +743,12 @@ disabledOps =
   OP_RESERVED
   ]
 
-notOkOps = [
+-- | The following instructions (defined by the 'bannedOPs' list) have been banned
+-- by the bitcoin core client. Any presence of any of these in a script invalidates
+-- the entire script. This means that, even if they reside in an execution branch
+-- that is not traversed in a hypothetical execution, the corresponding transaction
+-- is still regarded as invalid.
+bannedOPs = [
   OP_VERNOTIF,
   OP_VERIF
   ]

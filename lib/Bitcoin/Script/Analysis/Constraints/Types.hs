@@ -203,12 +203,12 @@ top :: Ty
 top =
  Ty { intRanges = [R.SpanRange (-maxBN) maxBN],
       bsRanges  = [R.SpanRange 0 maxBSL] }
-skTy :: Ty -- Secret key type
-skTy =
-  top { bsRanges = [R.SpanRange 0 100] }
+sigTy :: Ty -- Signature type
+sigTy =
+  top {bsRanges = [R.SingletonRange 0, R.SpanRange 9 73]}
 pkTy :: Ty -- Public key type
 pkTy =
- top { bsRanges = [R.SpanRange 0 100] }
+ top { bsRanges = [R.SingletonRange 33, R.SingletonRange 65] }
 
 bot :: Ty
 bot =

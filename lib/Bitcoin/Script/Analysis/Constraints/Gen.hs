@@ -309,18 +309,18 @@ genCnstrs (ScriptOp lbl OP_CHECKMULTISIG cont) = do
             \(element(1, Xsints, N)),\n\
 
             \(PosPUBS #= N + 1),\n\
-            \(PosNPRIVS #= N + 2),\n\
-            \(PosPRIVS #= N + 2 + M),\n\
+            \(PosNSIG #= N + 2),\n\
+            \(PosSIGS #= N + 2 + M),\n\
 
             \(element(PosPUBS, Xsbs, PUB)),\n\
-            \(PUB in 33\\/65),\n\
+            \(PUB in " ++ ranges2PL (bsRanges pkTy) ++ "),\n\
 
-            \(element(PosNPRIVS, Xsbs, NPRIVS)),\n\
-            \(NPRIVS in 0..4),\n\
-            \(element(PosNPRIVS, Xsints, M)),\n\
+            \(element(PosNSIG, Xsbs, NSIG)),\n\
+            \(NSIG in " ++ ranges2PL (bsRanges int) ++ "),\n\
+            \(element(PosNSIG, Xsints, M)),\n\
 
-            \(element(PosPRIVS, Xsbs, PRIV)),\n\
-            \(PRIV in 67),\n"
+            \(element(PosSIGS, Xsbs, SIG)),\n\
+            \(SIG in " ++ ranges2PL (bsRanges sigTy) ++ "),\n"
 
             st <- get
             let maxPubs = 20
@@ -683,6 +683,7 @@ stModOpPick n = do
 
 stModOpMSIG nPub nSig = do
   e_npub <- popStack -- the n_pubs
+  tySet e_npub int
   let n_pubsExpr = ConstInt nPub
       npubCnstr = Op e_npub "==" n_pubsExpr
 
@@ -690,16 +691,20 @@ stModOpMSIG nPub nSig = do
   (uncurry tySet) (annotTy n_pubsExpr)
   addCnstr (C_IsTrue npubCnstr)
 
-  ks_pub <- popsStack nPub
+  pubs <- popsStack nPub
+  mapM (flip tySet pkTy) pubs
 
-  e_nprivs <- popStack
-  let nprivConstant = ConstInt nSig
-      nprivCnstr = Op e_nprivs "==" nprivConstant
-  addCnstr (C_IsTrue nprivCnstr)
-  tySet nprivCnstr bool
-  (uncurry tySet) (annotTy nprivConstant)
+  e_nsig <- popStack
+  tySet e_nsig int
+  let nsigConstant = ConstInt nSig
+      nsigCnstr = Op e_nsig "==" nsigConstant
+  addCnstr (C_IsTrue nsigCnstr)
+  tySet nsigCnstr bool
+  (uncurry tySet) (annotTy nsigConstant)
 
-  ks_priv <- popsStack nSig
+  sigs <- popsStack nSig
+  mapM (flip tySet sigTy) sigs
+
   bug <- popStack -- Due to a bug in the Bitcoin core implementation
   let const0 = ConstInt 0
       bugCnstr = Op bug "==" const0
@@ -707,7 +712,7 @@ stModOpMSIG nPub nSig = do
   tySet bugCnstr bool
   addCnstr (C_IsTrue bugCnstr)
 
-  pushStack (MultiSig ks_priv ks_pub) bool
+  pushStack (MultiSig sigs pubs) bool
 
 disabledOps =
   [

@@ -232,15 +232,17 @@ tyIPL (i,_) = "T" ++ show i ++ "ints"
 
 stateTy ::  (Ident,Ty) -> PrologWriter ()
 stateTy t@(i,ty) = do
-  let bsFact = tyBSPL t ++ " in " ++ (intercalate " \\/ " $ map range2PL (bsRanges ty))
-  plFact bsFact
+  plFact $ tyBSPL t ++ " in " ++ ranges2PL (bsRanges ty)
 
   when (not $ null $ intRanges ty) $ do
-    let intFact = tyIPL t ++ " in " ++ (intercalate " \\/ " $ map range2PL (intRanges ty))
-    plFact intFact
+    plFact $ tyIPL t ++ " in " ++ ranges2PL (intRanges ty)
 
 range2PL :: R.Range Int -> PL
 range2PL (R.SingletonRange i) =
   show i
 range2PL (R.SpanRange i1 i2) =
   "(" ++ show i1 ++ ")..(" ++ show i2 ++ ")"
+
+ranges2PL :: [R.Range Int] -> PL
+ranges2PL rs =
+  intercalate " \\/ " $ map range2PL rs

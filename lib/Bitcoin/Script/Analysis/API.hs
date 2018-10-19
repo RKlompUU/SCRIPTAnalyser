@@ -127,8 +127,10 @@ dumpBranchReport report verbosity =
                      printListAsStack (map Var [0,(-1)..freshV bs+1])
       initialAltStack = "Required initial alternative stack:\n" ++
                         printListAsStack (map AltVar [0,(-1)..freshAltV bs+1])
+      vconstrs_ = (if prologValid report then filterAtomConstrs else id)
+                $ filter (not . isSpecCnstr) $ val_cnstrs bs
       vconstrs = "Inferred constraints:\n\t" ++
-                 (intercalate "\n\t" $ map show (filter (not . isSpecCnstr) $ val_cnstrs bs))
+                 (intercalate "\n\t" $ map show vconstrs_)
       tconstrs = "Inferred types:\n\t" ++
                  (intercalate "\n\t" $ map show (M.toList $ ty_cnstrs bs))
       st = "Resulting symbolic stack:\n\t[" ++

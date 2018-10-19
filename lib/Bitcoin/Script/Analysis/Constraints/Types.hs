@@ -330,6 +330,17 @@ data ValConstraint where
   C_Spec   :: Expr -> ValConstraint
   deriving (Eq)
 
+filterAtomConstrs :: [ValConstraint] -> [ValConstraint]
+filterAtomConstrs [] = []
+filterAtomConstrs (c@(C_Spec (Op e1 _ e2)):cs)
+  | isAtom e1 && isAtom e2 = filterAtomConstrs cs
+  | otherwise = c : filterAtomConstrs cs
+filterAtomConstrs (c@(C_IsTrue (Op e1 _ e2)):cs)
+  | isAtom e1 && isAtom e2 = filterAtomConstrs cs
+  | otherwise = c : filterAtomConstrs cs
+filterAtomConstrs (c:cs) =
+  c : filterAtomConstrs cs
+
 isSpecCnstr :: ValConstraint -> Bool
 isSpecCnstr (C_Spec _) = True
 isSpecCnstr _ = False

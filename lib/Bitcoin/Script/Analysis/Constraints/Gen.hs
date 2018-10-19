@@ -541,7 +541,6 @@ stModOp OP_EQUAL = do
 stModOp OP_CHECKSIG = do
   v_2 <- popStack
   v_1 <- popStack
-  -- TODO; is this enforced or not? The input types of Sig
   tySet v_1 sigTy
   tySet v_2 pkTy
   pushStack (Sig v_1 v_2) bool

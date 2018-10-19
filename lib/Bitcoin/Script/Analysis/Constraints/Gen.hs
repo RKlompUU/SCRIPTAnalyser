@@ -542,8 +542,8 @@ stModOp OP_CHECKSIG = do
   v_2 <- popStack
   v_1 <- popStack
   -- TODO; is this enforced or not? The input types of Sig
-  -- tySet v_1 skTy
-  -- tySet v_2 pkTy
+  tySet v_1 sigTy
+  tySet v_2 pkTy
   pushStack (Sig v_1 v_2) bool
 
 stModOp OP_CODESEPARATOR = return ()
@@ -714,7 +714,7 @@ stModOpMSIG nPub nSig = do
 
   pushStack (MultiSig sigs pubs) bool
 
--- | The following instructions (defined by the 'disabledOPs' list) have been disabled
+-- |The following instructions (defined by the 'disabledOPs' list) have been disabled
 -- by the bitcoin core client. Upon encountering any one of these in an execution,
 -- an error is thrown and the execution is deemed unsuccesful. This means that
 -- they can be present in correct scripts, as long as the specific execution branch
@@ -743,7 +743,7 @@ disabledOPs =
   OP_RESERVED
   ]
 
--- | The following instructions (defined by the 'bannedOPs' list) have been banned
+-- |The following instructions (defined by the 'bannedOPs' list) have been banned
 -- by the bitcoin core client. Any presence of any of these in a script invalidates
 -- the entire script. This means that, even if they reside in an execution branch
 -- that is not traversed in a hypothetical execution, the corresponding transaction

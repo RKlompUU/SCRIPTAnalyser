@@ -16,7 +16,12 @@ for input in scripts/*; do
   then
     mv -v "$output" "$cmp"
   else
-    echo "files differ"
-    kdiff3 "$cmp" "$output" &
+    if [ ! -f "$cmp" ]; then
+      echo 'new test'
+      mv -v "$output" "$cmp"
+    else
+      echo "files differ"
+      kdiff3 "$cmp" "$output" &
+    fi
   fi
 done

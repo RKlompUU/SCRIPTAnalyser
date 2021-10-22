@@ -9,7 +9,7 @@ SCRIPT Analyser is a tool that infers from a given _output_ script the constrain
 
 The tool can analyse any partial Bitcoin script. That is, it is not limited to the analysis of the standard types of output scripts. The tool supports the entire SCRIPT language (i.e. all operations that are permitted according the Bitcoin Core implementation are supported by this tool).
 
-Try it out online at: https://vm100.cs.stir.ac.uk/~rkl/home.html
+<!-- Try it out online at: https://vm100.cs.stir.ac.uk/~rkl/home.html (commented out, no longer appears to be up) -->
 
 #### Installation
 Dependency: Haskell's Stack (https://docs.haskellstack.org/en/stable/install_and_upgrade/)
@@ -30,7 +30,7 @@ The executable (SCRIPTAnalyser-exe) can be executed in any directory of this rep
 
 Call SCRIPTAnalyser-exe, with the output script in stdin, and optionally passing some arguments (call the tool with first argument 'help' for information regarding arguments)
 
-For example, if file scriptA contains an output script (see below for syntax description, or go to https://vm100.cs.stir.ac.uk/~rkl/docu.php), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
+For example, if file scriptA contains an output script (see below for syntax description<!-- , or go to https://vm100.cs.stir.ac.uk/~rkl/docu.php -->), run the following in Bash: stack exec SCRIPTAnalyser-exe -- < scriptA
 
 The same but with more verbose output: stack exec SCRIPTAnalyser-exe -- 2 < scriptA
 
@@ -55,4 +55,4 @@ In this section, the following information is printed:
 
 #### Custom SCRIPT syntax
 
-Scripts can be specified using an extended SCRIPT language (which is a superset of the bytestring SCRIPT language). Visit https://vm100.cs.stir.ac.uk/~rkl/docu.php, or https://github.com/RKlompUU/SCRIPTWriter, for a description of the extended language's syntax.
+Scripts can be specified using an extended SCRIPT language (which is a superset of the bytestring SCRIPT language). Visit <!-- https://vm100.cs.stir.ac.uk/~rkl/docu.php, or--> https://github.com/RKlompUU/SCRIPTWriter, for a description of the extended language's syntax.
